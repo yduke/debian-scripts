@@ -19,29 +19,32 @@ bash <(curl -fsSL https://raw.githubusercontent.com/yduke/debian-scripts/main/in
 脚本很可能会经常修复、更新，所以隔一段时间需要重新运行上面的命令来更新脚本。
 
 
-### 手动动安装（Install脚本原理）
+### 手动动安装
 
-创建文件
+如果你希望手动安装脚本，可按如下步骤，这同时也是自动安装脚本install.sh的原理：
 
 
-````
-sudo nano /usr/local/bin/update
-````
 
-并将
+1 复制以下脚本的内容
 
 ````
 https://raw.githubusercontent.com/yduke/debian-scripts/refs/heads/main/update
 ````
 
-脚本内容复制粘贴到文件内
+2 创建文件并粘贴内容
 
-赋予执行权限
+
+````
+sudo nano /usr/local/bin/update
+````
+保存。
+
+3 赋予执行权限
 
 ````
 sudo chmod +x /usr/local/bin/update
 ````
-
+4 完成
 
 ## 运行
 
