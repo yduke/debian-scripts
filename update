@@ -89,6 +89,7 @@ main_menu() {
         echo -e "${YELLOW}5)${RESET} 更新 SSL 证书（请勿尝试）"
         echo -e "${YELLOW}6)${RESET} Docker 安装与管理"
         echo -e "${YELLOW}7)${RESET} 系统检查"
+        echo -e "${YELLOW}8)${RESET} 更新脚本"
         echo -e "${YELLOW}0)${RESET} 退出"
         echo -e "${BLUE}-----------------------------${RESET}"
         read -p "请输入选项: " choice
@@ -101,6 +102,7 @@ main_menu() {
             5) update_ssl_certificates ;;
             6) docker_menu ;;
             7) system_check_menu ;;
+            8) self_update ;;
             0) echo -e "${GREEN}退出。${RESET}"; exit 0 ;;
             *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
         esac
@@ -473,6 +475,17 @@ system_check_menu() {
             *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
         esac
     done
+}
+
+# ---------- 更新 ----------
+self_update(){
+    echo -e "${GREEN}正在更新脚本...${RESET}"
+    require_command curl
+    bash <(curl -fsSL https://raw.githubusercontent.com/yduke/debian-scripts/main/install.sh)
+    echo -e "${GREEN}脚本已更新到最新版本！${RESET}"
+    echo -e "${GREEN}需要重启脚本生效。${RESET}"
+    read -p "按回车退出脚本，你需要再次执行update使用新版。"
+    exit 0
 }
 
 # ---------- 启动主菜单 ----------
