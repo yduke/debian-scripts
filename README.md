@@ -11,13 +11,19 @@
 执行：
 ```
 bash <(curl -fsSL https://raw.githubusercontent.com/yduke/debian-scripts/main/install.sh)
-
 ```
 
 为了尽量简化，尽量迅速，不影响任何服务器性能，本脚本没有自动更新的功能。
 
 脚本很可能会经常修复、更新，所以隔一段时间需要重新运行上面的命令来更新脚本。
 
+### 使用/运行：
+
+````
+update
+````
+
+--------
 
 ### 手动动安装
 
@@ -46,8 +52,7 @@ sudo chmod +x /usr/local/bin/update
 ````
 4 完成
 
-## 运行
-
+### 使用/运行：
 
 ````
 update
