@@ -1,0 +1,474 @@
+#!/bin/bash
+
+# ========================
+# Debian 系统维护工具
+# ========================
+
+# 颜色定义
+GREEN="\e[32m"
+YELLOW="\e[33m"
+RED="\e[31m"
+BLUE="\e[1;34m"
+CYAN="\e[36m"
+RESET="\e[0m"
+
+# 检查并安装命令
+# 用法: require_command <命令名> [<包名>]
+# 例如检查确保curl已安装：
+# require_command curl
+# 如果命令名和包名不同，第二个参数就可以指定包名：
+# require_command python3 python3-pip
+
+require_command() {
+    local cmd=$1
+    local pkg=${2:-$cmd}  # 默认包名和命令名相同
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo -e "${YELLOW}未检测到 $cmd，正在安装 $pkg...${RESET}"
+        # 只在需要安装时再更新 apt，避免每次都 update
+        apt update -y
+        apt install -y "$pkg"
+    fi
+}
+
+# 获取当前服务器 IPv4
+get_ipv4() {
+    # 1. 通过默认路由获取（最准确）
+    local ip
+    ip=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K[0-9.]+')
+    if [[ -n "$ip" ]]; then
+        echo "$ip"
+        return
+    fi
+
+    # 2. 使用 hostname -I
+    ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    if [[ -n "$ip" ]]; then
+        echo "$ip"
+        return
+    fi
+
+    # 3. 外网探测（不保证成功，最后兜底）
+    require_command curl
+    ip=$(curl -4 -s https://api.ipify.org || true)
+    if [[ -n "$ip" ]]; then
+        echo "$ip"
+        return
+    fi
+
+    echo "无法自动获取 IP"
+}
+SERVER_IP=$(get_ipv4)
+
+get_ipv6() {
+    ipv6=$(ip -6 addr show scope global | grep -oP 'inet6 \K[0-9a-f:]+')
+    if [ -z "$ipv6" ]; then
+        echo "No IPv6 address found"
+    else
+        echo "$ipv6"
+    fi
+}
+SERVER_IP6=$(get_ipv6)
+
+
+# ---------- 主菜单 ----------
+main_menu() {
+    while true; do
+        clear
+        echo -e "${BLUE}=============================${RESET}"
+        echo -e "${BLUE}   Debian 系统维护工具${RESET}"
+        echo -e "${BLUE}=============================${RESET}"
+        echo -e "${YELLOW}1)${RESET} 更新软件包 + 升级 + 清理"
+        echo -e "${YELLOW}2)${RESET} 更新并升级内核"
+        echo -e "${YELLOW}3)${RESET} 更换为国内软件源"
+        echo -e "${YELLOW}4)${RESET} 系统管理"
+        echo -e "${YELLOW}5)${RESET} 更新 SSL 证书（请勿尝试）"
+        echo -e "${YELLOW}6)${RESET} Docker 安装与管理"
+        echo -e "${YELLOW}7)${RESET} 系统检查"
+        echo -e "${YELLOW}0)${RESET} 退出"
+        echo "-----------------------------"
+        read -p "请输入选项: " choice
+
+        case "$choice" in
+            1) update_system ;;
+            2) upgrade_kernel ;;
+            3) change_sources ;;
+            4) system_menu ;;
+            5) update_ssl_certificates ;;
+            6) docker_menu ;;
+            7) system_check_menu ;;
+            0) echo -e "${GREEN}退出。${RESET}"; exit 0 ;;
+            *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
+        esac
+    done
+}
+
+# ---------- 1 更新软件包 + 升级 + 清理 ----------
+update_system() {
+    echo -e "${GREEN}开始更新软件包列表...${RESET}"
+    apt update -y
+    echo -e "${GREEN}开始升级软件包...${RESET}"
+    apt upgrade -y
+    echo -e "${GREEN}开始清理不需要的软件包...${RESET}"
+    apt autoremove -y
+    apt clean
+    read -p "完成！按回车返回主菜单..."
+}
+
+# ---------- 2 升级内核 ----------
+upgrade_kernel() {
+    echo -e "${GREEN}开始升级内核及相关软件包...${RESET}"
+    apt update -y
+    apt full-upgrade -y
+    apt autoremove --purge -y
+    if [ -f /var/run/reboot-required ]; then
+        echo -e "${RED}系统需要重启！${RESET}"
+    fi
+    read -p "按回车返回主菜单..."
+}
+
+# ---------- 3 更换软件源 ----------
+change_sources() {
+    echo -e "${GREEN}正在获取换源脚本 ...${RESET}"
+    # 检查 curl
+    require_command curl
+    bash <(curl -sSL https://linuxmirrors.cn/main.sh)
+    read -p "按回车返回主菜单..."
+}
+
+
+# ---------- 4 系统管理 ----------
+system_menu() {
+    while true; do
+        clear
+        echo -e "${BLUE}----- 系统管理 -----${RESET}"
+        echo -e "${YELLOW}1)${RESET} 开启SSH远程密码登录"
+        echo -e "${YELLOW}2)${RESET} 安装或更新 ddns-go"
+        echo -e "${RED}3) 卸载 ddns-go${RESET}"
+        echo -e "${YELLOW}0)${RESET} 返回主菜单"
+        read -p "请输入选项: " choice
+        case "$choice" in
+            1)
+                echo -e "${GREEN}🔧 开启 SSH 远程密码登录...${RESET}"
+                # 确保以 root 用户运行
+                if [ "$EUID" -ne 0 ]; then
+                    echo -e "${YELLOW}请使用 root 用户运行此脚本！${RESET}"
+                    echo -e "${YELLOW}权限不足，退出！${RESET}"
+                    exit 1
+                fi
+
+                SSHD_CONFIG="/etc/ssh/sshd_config"
+
+                # 检查 openssh-server 是否安装
+                if ! dpkg -l | grep -qw openssh-server; then
+                    echo -e "${YELLOW}系统未安装 openssh-server，正在安装...${RESET}"
+                    apt update
+                    apt install -y openssh-server
+                else
+                    echo -e "${GREEN}openssh-server 已安装。${RESET}"
+                fi
+
+                # 备份原始配置文件
+                BACKUP_FILE="/etc/ssh/sshd_config.bak.$(date +%F-%T)"
+                cp "$SSHD_CONFIG" "$BACKUP_FILE"
+                echo -e "${GREEN}已备份原始配置到 $BACKUP_FILE${RESET}"
+
+                # 修改或添加 PermitRootLogin yes
+                if grep -qE "^\s*PermitRootLogin" "$SSHD_CONFIG"; then
+                    sed -i "s/^\s*PermitRootLogin.*/PermitRootLogin yes/" "$SSHD_CONFIG"
+                else
+                    echo "PermitRootLogin yes" >> "$SSHD_CONFIG"
+                fi
+
+                # 修改或添加 PasswordAuthentication yes
+                if grep -qE "^\s*PasswordAuthentication" "$SSHD_CONFIG"; then
+                    sed -i "s/^\s*PasswordAuthentication.*/PasswordAuthentication yes/" "$SSHD_CONFIG"
+                else
+                    echo "PasswordAuthentication yes" >> "$SSHD_CONFIG"
+                fi
+
+                # 确保 SSH 服务启动
+                systemctl enable ssh
+
+                # 重启 SSH 服务
+                systemctl restart ssh
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}SSH 服务已重启，远程登录已开启。${RESET}"
+                    echo -e "${GREEN}你现在可以使用 root 或普通用户通过密码远程登录 SSH。${RESET}"
+                else
+                    echo -e "${RED}SSH 服务重启失败，请重试或手动检查配置文件：$SSHD_CONFIG${RESET}"
+                fi
+                read -p "按回车返回..."
+                ;;
+            2)
+                INSTALL_DIR="/usr/local/ddns-go"
+                SERVICE_FILE="/etc/systemd/system/ddns-go.service"
+
+                echo -e "${GREEN}开始查询 ddns-go 最新版本...${RESET}"
+                require_command curl
+
+                LATEST_VERSION=$(curl -s https://api.github.com/repos/jeessy2/ddns-go/releases/latest | grep tag_name | cut -d '"' -f 4)
+
+                if [ -z "$LATEST_VERSION" ]; then
+                    echo -e "${RED}获取最新版本失败，退出。${RESET}"
+                    exit 1
+                fi
+
+                echo -e "${GREEN}最新版本: $LATEST_VERSION${RESET}"
+
+                # 构造下载 URL
+                TAR_FILE="ddns-go_${LATEST_VERSION#v}_linux_x86_64.tar.gz"
+                DOWNLOAD_URL="https://github.com/jeessy2/ddns-go/releases/download/${LATEST_VERSION}/${TAR_FILE}"
+
+                echo -e "${GREEN}下载地址: $DOWNLOAD_URL${RESET}"
+
+                # 判断是否已经安装
+                if systemctl is-active --quiet ddns-go.service; then
+                    MODE="update"
+                    echo -e "${GREEN}检测到 ddns-go 正在运行，将执行更新操作...${RESET}"
+                else
+                    if [ -f "$SERVICE_FILE" ]; then
+                        MODE="update"
+                        echo -e "${GREEN}检测到 ddns-go 已安装但未运行，将执行更新操作...${RESET}"
+                    else
+                        MODE="install"
+                        echo -e "${GREEN}ddns-go 未安装，将执行全新安装...${RESET}"
+                    fi
+                fi
+
+                # 停止服务（如已安装）
+                if [ "$MODE" = "update" ]; then
+                    echo -e "${GREEN}停止 ddns-go.service ...${RESET}"
+                    systemctl stop ddns-go.service || true
+                fi
+
+                echo -e "${GREEN}创建目录: $INSTALL_DIR${RESET}"
+                mkdir -p "$INSTALL_DIR"
+                cd "$INSTALL_DIR"
+
+                echo -e "${GREEN}下载最新版 ddns-go...${RESET}"
+                if [ -f "$TAR_FILE" ]; then
+                    echo -e "${GREEN}发现本地已存在 $TAR_FILE ，跳过下载。${RESET}"
+                else
+                    echo -e "${GREEN}正在下载 $TAR_FILE ...${RESET}"
+                    wget -O "$TAR_FILE" "$DOWNLOAD_URL"
+                fi
+
+                echo -e "${GREEN}解压覆盖...${RESET}"
+                tar -zxvf "$TAR_FILE"
+                if [ "$MODE" = "update" ]; then
+                    echo -e "${GREEN}卸载旧的 ddns-go systemd 服务...${RESET}"
+                    "${INSTALL_DIR}/ddns-go" -s uninstall || true
+                    echo -e "${GREEN}旧服务卸载完成。${RESET}"
+                fi
+                echo -e "${GREEN}安装/更新 systemd 服务...${RESET}"
+                "${INSTALL_DIR}/ddns-go" -s install
+
+                echo -e "${GREEN}重载 systemctl...${RESET}"
+                systemctl daemon-reload
+
+                echo -e "${GREEN}启动 ddns-go.service...${RESET}"
+                systemctl start ddns-go.service
+
+                echo -e "${GREEN}设置开机自启...${RESET}"
+                systemctl enable ddns-go.service
+
+                echo -e "${GREEN}清理安装文件...${RESET}"
+                rm -f "$TAR_FILE"
+                rm -f "${INSTALL_DIR}/README_EN.md"
+                rm -f "${INSTALL_DIR}/README.md"
+                rm -f "${INSTALL_DIR}/LICENSE"
+
+                echo -e "${GREEN}防火墙放行...${RESET}"
+                if command -v ufw >/dev/null 2>&1; then
+                    echo -e "${GREEN}检测到 UFW，放行端口 9876...${RESET}"
+                    ufw allow 9876/tcp || true
+                fi
+
+                echo -e "${GREEN}ddns-go $MODE 完成！当前版本：$LATEST_VERSION${RESET}"
+   
+                if [[ "$SERVER_IP" = "无法自动获取 IP" ]]; then
+                    echo -e "${YELLOW}Web 界面访问: http://你的IP:9876${RESET}"
+                else
+                    echo -e "${GREEN}Web 界面访问: http://$SERVER_IP:9876${RESET}"
+                fi
+
+                read -p "按回车返回..."
+                ;;
+            3)
+                echo -e "${RED}卸载 ddns-go${RESET}"
+                INSTALL_DIR="/usr/local/ddns-go"
+                SERVICE_FILE="/etc/systemd/system/ddns-go.service"
+                # 判断是否已经安装
+                if systemctl is-active --quiet ddns-go.service; then
+                    MODE="uninstall"
+                    echo -e "${GREEN}检测到 ddns-go 正在运行，将执行卸载...${RESET}"
+                else
+                    if [ -f "$SERVICE_FILE" ]; then
+                        MODE="uninstall"
+                        echo -e "${GREEN}检测到 ddns-go 已安装但未运行，将执行卸载操作...${RESET}"
+                    else
+                        echo -e "${GREEN}ddns-go 未安装，无需卸载${RESET}"
+                        exit 1
+                    fi
+                fi
+                # 停止服务
+                echo -e "${GREEN}停止 ddns-go.service ...${RESET}"
+                systemctl stop ddns-go.service || true
+                echo -e "${GREEN}卸载 ddns-go systemd 服务...${RESET}"
+                "${INSTALL_DIR}/ddns-go" -s uninstall || true
+                echo -e "${GREEN}服务卸载完成。${RESET}"
+                echo -e "${GREEN}删除安装目录...${RESET}"
+                rm -rf "$INSTALL_DIR"
+                echo -e "${GREEN}ddns-go 卸载完成！${RESET}"
+                read -p "按回车返回..."
+                ;;
+            0) break ;;
+            *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
+        esac
+    done
+}
+
+
+# ---------- 5 更新 SSL 证书 ----------
+update_ssl_certificates() {
+    echo -e "${GREEN}🔄 正在更新 SSL 证书 ...${RESET}"
+    if command -v pve-cert-sync &> /dev/null; then
+        pve-cert-sync
+    else
+        echo -e "${YELLOW}命令 pve-cert-sync 不存在，执行替代操作${RESET}"
+        # 检查 curl
+        require_command curl
+        bash <(curl -fsSL https://raw.githubusercontent.com/yduke/pve-cert-sync/main/install.sh)
+        pve-cert-sync
+    fi
+    read -p "完成！按回车返回主菜单..."
+}
+
+# ---------- Docker 菜单 ----------
+docker_menu() {
+    while true; do
+        clear
+        echo -e "${BLUE}----- Docker 管理 -----${RESET}"
+        echo -e "${YELLOW}1)${RESET} 安装 Docker"
+        echo -e "${YELLOW}2)${RESET} 更换 Docker 镜像加速源"
+        echo -e "${YELLOW}0)${RESET} 返回主菜单"
+        read -p "请输入选项: " choice
+        case "$choice" in
+            1)
+                echo -e "${GREEN}安装 Docker ...${RESET}"
+                # 检查 curl
+                require_command curl
+                bash <(curl -sSL https://linuxmirrors.cn/docker.sh)
+                read -p "按回车返回..."
+                ;;
+            2)
+                echo -e "${GREEN}更换 Docker 镜像加速源 ...${RESET}"
+                # 检查 curl
+                require_command curl
+                bash <(curl -sSL https://linuxmirrors.cn/docker.sh) --only-registry
+                read -p "按回车返回..."
+                ;;
+            0) break ;;
+            *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
+        esac
+    done
+}
+
+# ---------- 7 系统检查 ----------
+system_check_menu() {
+    while true; do
+        clear
+        echo -e "${BLUE}----- 系统检查 -----${RESET}"
+        echo -e "${YELLOW}1)${RESET} 检查是否需要重启"
+        echo -e "${YELLOW}2)${RESET} 查看磁盘空间"
+        echo -e "${YELLOW}3)${RESET} 查看最近系统日志"
+        echo -e "${YELLOW}4)${RESET} 查看 CPU 使用"
+        echo -e "${YELLOW}5)${RESET} 查看内存使用"
+        echo -e "${YELLOW}6)${RESET} 查看系统配置"
+        echo -e "${YELLOW}7)${RESET} 查看内核版本"
+        echo -e "${YELLOW}8)${RESET} 查看失败服务"
+        echo -e "${YELLOW}9)${RESET} 查看IP地址"
+        echo -e "${YELLOW}0)${RESET} 返回主菜单"
+        read -p "请输入选项: " choice
+        case "$choice" in
+            1)
+                if [ -f /var/run/reboot-required ]; then
+                    echo -e "${RED}系统需要重启！${RESET}"
+                    cat /var/run/reboot-required
+                else
+                    echo -e "${GREEN}不需要重启。${RESET}"
+                fi
+                read -p "按回车返回..."
+                ;;
+            2)
+                echo -e "${CYAN}磁盘空间使用情况：${RESET}"
+			    hd_percent=$(df --output=pcent / | tail -1 | tr -dc '0-9.')
+			    hd_used=$(df --output=used / | tail -1)
+			    hd_used_gb=$(awk -v k="$hd_used" 'BEGIN {printf "%.2f", k/1024/1024}')
+			    echo "已使用 $hd_percent %，使用了 $hd_used_gb GB"
+                read -p "按回车返回..."
+                ;;
+            3)
+                echo -e "${CYAN}最近 50 行系统日志：${RESET}"
+                journalctl -n 50
+                read -p "按回车返回..."
+                ;;
+            4)
+                echo -e "${CYAN}CPU 使用情况：${RESET}"
+                top -b -n 1 | head -n 5
+                read -p "按回车返回..."
+                ;;
+            5)
+                echo -e "${CYAN}内存使用情况：${RESET}"
+
+                get_mem_info() {
+                    awk '
+                        /MemTotal:/      {total=$2}
+                        /MemAvailable:/  {avail=$2}
+                        END {
+                            used = total - avail
+                            printf("%.1f %.2f", used/total*100, used/1024/1024)
+                        }
+                    ' /proc/meminfo
+                }
+                read mem_percent mem_used_gb <<< "$(get_mem_info)"
+                echo "已使用 $mem_percent %，使用了 $mem_used_gb GB"
+                read -p "按回车返回..."
+                ;;
+            6)
+                echo -e "${CYAN}当前系统配置：${RESET}"
+                hostnamectl
+                read -p "按回车返回..."
+                ;;
+            7)
+                echo -e "${CYAN}当前内核版本：${RESET}"
+                uname -r
+                read -p "按回车返回..."
+                ;;
+            8)
+                echo -e "${CYAN}查看失败服务：${RESET}"
+                failed=$(systemctl --failed --no-pager --plain --quiet | awk 'NR>1 {print $1}')
+                if [ -z "$failed" ]; then
+                    echo -e "${GREEN}当前没有失败服务${RESET}"
+                else
+                    for svc in $failed; do
+                        echo -e "\n服务: $svc"
+                        journalctl -u "$svc" -n 20 --no-pager
+                    done
+                fi
+                read -p "按回车返回..."
+                ;;
+            9)
+                echo -e "${CYAN}当前 IP 地址：${RESET}"
+                echo -e "IPV4: ${GREEN}$SERVER_IP${RESET}"
+                echo -e "IPV6: ${GREEN}$SERVER_IP6${RESET}"
+                read -p "按回车返回..."
+                ;;
+            0) break ;;
+            *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
+        esac
+    done
+}
+
+# ---------- 启动主菜单 ----------
+main_menu
