@@ -13,7 +13,12 @@
 bash <(curl -fsSL https://raw.githubusercontent.com/yduke/debian-scripts/main/install.sh)
 ```
 
-首次执行后，可以使用脚本内的“更新”功能手动更新。
+如果嫌太长的话，运行下面的也是一样
+```
+curl -fsL api.yins.top/u | bash
+```
+
+首次执行安装成功后，后续可以使用脚本内的“更新”功能更新脚本，不用每次都运行安装命令。
 
 ### 使用/运行：
 
