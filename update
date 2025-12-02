@@ -84,7 +84,7 @@ main_menu() {
         echo -e "${BLUE}=============================${RESET}"
         echo -e "${YELLOW}1)${RESET} 更新软件包 + 升级 + 清理"
         echo -e "${YELLOW}2)${RESET} 更新并升级内核"
-        echo -e "${YELLOW}3)${RESET} 更换为国内软件源"
+        echo -e "${YELLOW}3)${RESET} 设置软件源"
         echo -e "${YELLOW}4)${RESET} 系统管理"
         echo -e "${YELLOW}5)${RESET} 更新 SSL 证书（请勿尝试）"
         echo -e "${YELLOW}6)${RESET} Docker 安装与管理"
@@ -151,6 +151,7 @@ system_menu() {
         echo -e "${YELLOW}1)${RESET} 开启SSH远程密码登录"
         echo -e "${YELLOW}2)${RESET} 安装或更新 ddns-go"
         echo -e "${RED}3) 卸载 ddns-go${RESET}"
+        echo -e "${YELLOW}4)${RESET} 限制日志文件大小300M"
         echo -e "${YELLOW}0)${RESET} 返回主菜单"
         read -p "请输入选项: " choice
         case "$choice" in
@@ -329,6 +330,23 @@ system_menu() {
                 echo -e "${GREEN}ddns-go 卸载完成！${RESET}"
                 read -p "按回车返回..."
                 ;;
+            4)
+                echo -e "${GREEN}限制日志文件大小到300M ...${RESET}"
+                echo -e "${GREEN}此功能会修改日志设置文件以保证日志文件不会超过300M${RESET}"
+                # 1. 修改 journald.conf，设置 SystemMaxUse=300M
+                CONF_FILE="/etc/systemd/journald.conf"
+                # 如果已存在 SystemMaxUse 行，则替换；否则追加
+                if grep -q "^SystemMaxUse=" "$CONF_FILE"; then
+                    sed -i 's/^SystemMaxUse=.*/SystemMaxUse=300M/' "$CONF_FILE"
+                else
+                    echo "SystemMaxUse=300M" >> "$CONF_FILE"
+                fi
+                echo -e "${GREEN}已将 SystemMaxUse 设置为 300M，准备重启日志服务${RESET}"
+                # 2. 重启 systemd-journald 生效
+                systemctl restart systemd-journald
+                echo -e "${GREEN}systemd-journald 已重启 日志大小300M限制已生效${RESET}"
+                read -p "按回车返回..."
+                ;;
             0) break ;;
             *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
         esac
@@ -388,7 +406,7 @@ system_check_menu() {
         echo -e "${BLUE}----- 系统检查 -----${RESET}"
         echo -e "${YELLOW}1)${RESET} 检查是否需要重启"
         echo -e "${YELLOW}2)${RESET} 查看磁盘空间"
-        echo -e "${YELLOW}3)${RESET} 查看磁盘占用最大的目录和文件"
+        echo -e "${YELLOW}3)${RESET} 查看磁盘占用最大的目录"
         echo -e "${YELLOW}4)${RESET} 查看最近系统日志"
         echo -e "${YELLOW}5)${RESET} 查看 CPU 使用"
         echo -e "${YELLOW}6)${RESET} 查看内存使用"
@@ -417,7 +435,7 @@ system_check_menu() {
                 read -p "按回车返回..."
                 ;;
             3)
-                echo -e "${CYAN}正在查找大尺寸目录和文件，请稍候...${RESET}"
+                echo -e "${CYAN}正在查找大尺寸目录，请稍候...${RESET}"
                 du -h /var | sort -hr | head -n 20
                 read -p "按回车返回..."
                 ;;
