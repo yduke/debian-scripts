@@ -388,13 +388,14 @@ system_check_menu() {
         echo -e "${BLUE}----- 系统检查 -----${RESET}"
         echo -e "${YELLOW}1)${RESET} 检查是否需要重启"
         echo -e "${YELLOW}2)${RESET} 查看磁盘空间"
-        echo -e "${YELLOW}3)${RESET} 查看最近系统日志"
-        echo -e "${YELLOW}4)${RESET} 查看 CPU 使用"
-        echo -e "${YELLOW}5)${RESET} 查看内存使用"
-        echo -e "${YELLOW}6)${RESET} 查看系统配置"
-        echo -e "${YELLOW}7)${RESET} 查看内核版本"
-        echo -e "${YELLOW}8)${RESET} 查看失败服务"
-        echo -e "${YELLOW}9)${RESET} 查看IP地址"
+        echo -e "${YELLOW}3)${RESET} 查看磁盘占用最大的目录和文件"
+        echo -e "${YELLOW}4)${RESET} 查看最近系统日志"
+        echo -e "${YELLOW}5)${RESET} 查看 CPU 使用"
+        echo -e "${YELLOW}6)${RESET} 查看内存使用"
+        echo -e "${YELLOW}7)${RESET} 查看系统配置"
+        echo -e "${YELLOW}8)${RESET} 查看内核版本"
+        echo -e "${YELLOW}9)${RESET} 查看失败服务"
+        echo -e "${YELLOW}10)${RESET} 查看IP地址"
         echo -e "${YELLOW}0)${RESET} 返回主菜单"
         read -p "请输入选项: " choice
         case "$choice" in
@@ -416,16 +417,21 @@ system_check_menu() {
                 read -p "按回车返回..."
                 ;;
             3)
+                echo -e "${CYAN}列出最大尺寸的文件和目录${RESET}"
+                du -h /var | sort -hr | head -n 20
+                read -p "按回车返回..."
+                ;;
+            4)
                 echo -e "${CYAN}最近 50 行系统日志：${RESET}"
                 journalctl -n 50
                 read -p "按回车返回..."
                 ;;
-            4)
+            5)
                 echo -e "${CYAN}CPU 使用情况：${RESET}"
                 top -b -n 1 | head -n 5
                 read -p "按回车返回..."
                 ;;
-            5)
+            6)
                 echo -e "${CYAN}内存使用情况：${RESET}"
 
                 get_mem_info() {
@@ -442,17 +448,17 @@ system_check_menu() {
                 echo "已使用 $mem_percent %，使用了 $mem_used_gb GB"
                 read -p "按回车返回..."
                 ;;
-            6)
+            7)
                 echo -e "${CYAN}当前系统配置：${RESET}"
                 hostnamectl
                 read -p "按回车返回..."
                 ;;
-            7)
+            8)
                 echo -e "${CYAN}当前内核版本：${RESET}"
                 uname -r
                 read -p "按回车返回..."
                 ;;
-            8)
+            9)
                 echo -e "${CYAN}查看失败服务：${RESET}"
                 failed=$(systemctl --failed --no-pager --plain --quiet | awk 'NR>1 {print $1}')
                 if [ -z "$failed" ]; then
@@ -465,7 +471,7 @@ system_check_menu() {
                 fi
                 read -p "按回车返回..."
                 ;;
-            9)
+            10)
                 echo -e "${CYAN}当前 IP 地址：${RESET}"
                 echo -e "IPV4: ${GREEN}$SERVER_IP${RESET}"
                 echo -e "IPV6: ${GREEN}$SERVER_IP6${RESET}"
