@@ -417,7 +417,7 @@ system_check_menu() {
                 read -p "按回车返回..."
                 ;;
             3)
-                echo -e "${CYAN}列出最大尺寸的文件和目录${RESET}"
+                echo -e "${CYAN}正在查找大尺寸目录和文件，请稍候...${RESET}"
                 du -h /var | sort -hr | head -n 20
                 read -p "按回车返回..."
                 ;;
