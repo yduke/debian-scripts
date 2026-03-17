@@ -355,6 +355,7 @@ system_menu() {
                     npx -y @larksuite/openclaw-lark-tools install
                     echo "Plugin installation completed."
                 fi
+                ;;
             6)
                 echo -e "${GREEN}限制日志文件大小到300M ...${RESET}"
                 echo -e "${GREEN}此功能会修改日志设置文件以保证日志文件不会超过300M${RESET}"
