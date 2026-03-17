@@ -348,6 +348,7 @@ system_menu() {
                 else
                     echo "OpenClaw not found."
                     echo "Installing OpenClaw..."
+                    require_command curl
                     curl -fsSL https://openclaw.ai/install.sh | bash
                     echo "OpenClaw installation completed, install WeCom plugin."
                     openclaw plugins install @wecom/wecom-openclaw-plugin
