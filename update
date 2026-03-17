@@ -335,7 +335,7 @@ system_menu() {
             4)
                 echo -e "${GREEN}开始安装 OpenClaw...${RESET}"
                 require_command curl
-                bash <(curl -fsSL https://openclaw.ai/install.sh | bash)
+                curl -fsSL https://openclaw.ai/install.sh | bash
                 read -p "按回车返回..."
                 ;;
             5)
