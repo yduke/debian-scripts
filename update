@@ -151,7 +151,9 @@ system_menu() {
         echo -e "${YELLOW}1)${RESET} 开启SSH远程密码登录"
         echo -e "${YELLOW}2)${RESET} 安装或更新 ddns-go"
         echo -e "${RED}3) 卸载 ddns-go${RESET}"
-        echo -e "${YELLOW}4)${RESET} 限制日志文件大小300M"
+        echo -e "${CYAN}4)${RESET} 安装OpenClaw"
+        echo -e "${CYAN}5)${RESET} 安装OpenClaw飞书 企业微信插件"
+        echo -e "${YELLOW}6)${RESET} 限制日志文件大小300M"
         echo -e "${YELLOW}0)${RESET} 返回主菜单"
         read -p "请输入选项: " choice
         case "$choice" in
@@ -331,6 +333,28 @@ system_menu() {
                 read -p "按回车返回..."
                 ;;
             4)
+                echo -e "${GREEN}开始安装 OpenClaw...${RESET}"
+                require_command curl
+                bash <(curl -fsSL https://openclaw.ai/install.sh | bash)
+                read -p "按回车返回..."
+                ;;
+            5)
+                if command -v openclaw >/dev/null 2>&1; then
+                    echo "OpenClaw is installed."
+                    echo "Installing WeCom plugin..."
+                    openclaw plugins install @wecom/wecom-openclaw-plugin
+                    npx -y @larksuite/openclaw-lark-tools install
+                    echo "Plugin installation completed."
+                else
+                    echo "OpenClaw not found."
+                    echo "Installing OpenClaw..."
+                    curl -fsSL https://openclaw.ai/install.sh | bash
+                    echo "OpenClaw installation completed, install WeCom plugin."
+                    openclaw plugins install @wecom/wecom-openclaw-plugin
+                    npx -y @larksuite/openclaw-lark-tools install
+                    echo "Plugin installation completed."
+                fi
+            6)
                 echo -e "${GREEN}限制日志文件大小到300M ...${RESET}"
                 echo -e "${GREEN}此功能会修改日志设置文件以保证日志文件不会超过300M${RESET}"
                 # 1. 修改 journald.conf，设置 SystemMaxUse=300M
