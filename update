@@ -381,16 +381,209 @@ system_menu() {
 
 
 # ---------- 5 更新 SSL 证书 ----------
+# ─────────────────────────────────────────────
+# 配置区：按需修改
+# ─────────────────────────────────────────────
+CERT_SERVER="http://192.168.2.1:16666"
+DOMAIN="yins.top"
+
+CERT_URL="${CERT_SERVER}/${DOMAIN}.crt"
+KEY_URL="${CERT_SERVER}/${DOMAIN}.key"
+PEM_URL="${CERT_SERVER}/${DOMAIN}.pem"
+ISSUER_URL="${CERT_SERVER}/${DOMAIN}_issuerCertificate.crt"
+
+TMP_DIR="$(mktemp -d)"
+CERT_FILE="${TMP_DIR}/${DOMAIN}.crt"
+KEY_FILE="${TMP_DIR}/${DOMAIN}.key"
+PEM_FILE="${TMP_DIR}/${DOMAIN}.pem"
+ISSUER_FILE="${TMP_DIR}/${DOMAIN}_issuer.crt"
+
+info()    { echo -e "${CYAN}[INFO]${RESET}  $*"; }
+success() { echo -e "${GREEN}[OK]${RESET}    $*"; }
+warn()    { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
+error()   { echo -e "${RED}[ERROR]${RESET} $*" >&2; }
+# ─────────────────────────────────────────────
+# 清理临时目录（退出时自动执行）
+# ─────────────────────────────────────────────
+cleanup() {
+    rm -rf "${TMP_DIR}"
+    info "已清理临时目录"
+}
+trap cleanup EXIT
+
+# ─────────────────────────────────────────────
+# 从文件服务器下载证书文件
+# ─────────────────────────────────────────────
+download_certs() {
+    info "正在从 ${CERT_SERVER} 下载证书文件..."
+
+    local urls=("${CERT_URL}" "${KEY_URL}" "${PEM_URL}" "${ISSUER_URL}")
+    local files=("${CERT_FILE}" "${KEY_FILE}" "${PEM_FILE}" "${ISSUER_FILE}")
+
+    for i in "${!urls[@]}"; do
+        info "  下载 ${urls[$i]}"
+        if ! curl -fsSL --connect-timeout 10 --max-time 30 \
+                "${urls[$i]}" -o "${files[$i]}"; then
+            error "下载失败：${urls[$i]}"
+            error "请确认 192.168.2.1:16666 服务可访问，且当前机器在局域网内"
+            exit 1
+        fi
+    done
+
+    success "证书文件下载完成，存放于 ${TMP_DIR}"
+}
+
+# ─────────────────────────────────────────────
+# 判断系统类型
+# ─────────────────────────────────────────────
+is_pve() {
+    # 同时检查命令与目录，双重确认
+    command -v pveversion &>/dev/null && [[ -d /etc/pve ]]
+}
+
+is_debian() {
+    [[ -f /etc/debian_version ]] || \
+    (command -v grep &>/dev/null && grep -qi '^ID=debian' /etc/os-release 2>/dev/null)
+}
+
+
+# ─────────────────────────────────────────────
+# PVE 安装逻辑
+# ─────────────────────────────────────────────
+install_pve() {
+    local node
+    node="$(hostname)"
+    local pve_cert_dir="/etc/pve/nodes/${node}"
+
+    info "检测到 Proxmox VE 系统，节点名：${node}"
+
+    # 1. 备份旧证书
+    local backup_dir="/root/cert-backup-$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "${backup_dir}"
+    if ls "${pve_cert_dir}"/*.pem "${pve_cert_dir}"/*.key &>/dev/null 2>&1; then
+        cp "${pve_cert_dir}"/*.pem "${pve_cert_dir}"/*.key "${backup_dir}/" 2>/dev/null || true
+        success "旧证书已备份至 ${backup_dir}"
+    fi
+
+    # 2. 强制重置 PVE 证书（清除旧自定义证书）
+    info "执行 pvecm updatecerts --force 重置证书..."
+    pvecm updatecerts --force
+    success "pvecm updatecerts 完成"
+
+    # 3. 将新证书写入 PVE 节点证书目录
+    #    pveproxy-ssl.pem = 完整证书链（域名证书 + 中间 CA）
+    #    pveproxy-ssl.key = 私钥
+    info "安装新证书到 ${pve_cert_dir}..."
+
+    # 构建完整链：域名证书 + 颁发者证书
+    cat "${CERT_FILE}" "${ISSUER_FILE}" > "${pve_cert_dir}/pveproxy-ssl.pem"
+    cp  "${KEY_FILE}"                    "${pve_cert_dir}/pveproxy-ssl.key"
+
+    # 设置正确权限
+    chmod 640 "${pve_cert_dir}/pveproxy-ssl.pem"
+    chmod 600 "${pve_cert_dir}/pveproxy-ssl.key"
+    chown root:www-data "${pve_cert_dir}/pveproxy-ssl.pem" 2>/dev/null || \
+        chown root:root  "${pve_cert_dir}/pveproxy-ssl.pem"
+    chown root:root "${pve_cert_dir}/pveproxy-ssl.key"
+
+    success "证书文件已写入 ${pve_cert_dir}"
+
+    # 4. 重启 pveproxy 使证书生效
+    info "重启 pveproxy 服务..."
+    systemctl restart pveproxy
+    systemctl is-active --quiet pveproxy && \
+        success "pveproxy 已成功重启" || \
+        { error "pveproxy 重启失败，请检查日志：journalctl -xe -u pveproxy"; exit 1; }
+
+    # 5. 输出验证信息
+    echo ""
+    info "证书信息验证："
+    openssl x509 -in "${pve_cert_dir}/pveproxy-ssl.pem" \
+        -noout -subject -issuer -dates 2>/dev/null \
+        | sed 's/^/    /'
+    echo ""
+    success "PVE 证书安装完成！访问 https://pve.yins.top:8006 验证"
+}
+
+
+# ─────────────────────────────────────────────
+# Debian 安装逻辑
+# ─────────────────────────────────────────────
+install_debian() {
+    info "检测到 Debian 系统"
+
+    # 1. 安装系统级 CA 信任（将颁发者证书加入系统信任链）
+    info "将 CA 证书添加到系统信任链..."
+    local ca_dir="/usr/local/share/ca-certificates"
+    mkdir -p "${ca_dir}"
+    cp "${ISSUER_FILE}" "${ca_dir}/${DOMAIN}_issuer.crt"
+    update-ca-certificates
+    success "系统 CA 信任链已更新"
+
+    # 2. 将证书和私钥部署到标准位置
+    local ssl_cert_dir="/etc/ssl/certs"
+    local ssl_key_dir="/etc/ssl/private"
+
+    info "部署证书文件..."
+
+    # 完整链：域名证书 + 颁发者
+    cat "${CERT_FILE}" "${ISSUER_FILE}" > "${ssl_cert_dir}/${DOMAIN}-fullchain.pem"
+    cp  "${KEY_FILE}"                    "${ssl_key_dir}/${DOMAIN}.key"
+    cp  "${PEM_FILE}"                    "${ssl_cert_dir}/${DOMAIN}.pem"
+
+    # 设置正确权限
+    chmod 644 "${ssl_cert_dir}/${DOMAIN}-fullchain.pem"
+    chmod 644 "${ssl_cert_dir}/${DOMAIN}.pem"
+    chmod 600 "${ssl_key_dir}/${DOMAIN}.key"
+    chown root:root "${ssl_cert_dir}/${DOMAIN}-fullchain.pem"
+    chown root:root "${ssl_cert_dir}/${DOMAIN}.pem"
+    chown root:ssl-cert "${ssl_key_dir}/${DOMAIN}.key" 2>/dev/null || \
+        chown root:root  "${ssl_key_dir}/${DOMAIN}.key"
+
+    success "证书已部署到："
+    echo "    证书链：${ssl_cert_dir}/${DOMAIN}-fullchain.pem"
+    echo "    PEM   ：${ssl_cert_dir}/${DOMAIN}.pem"
+    echo "    私钥  ：${ssl_key_dir}/${DOMAIN}.key"
+
+    # 3. 验证证书信息
+    echo ""
+    info "证书信息验证："
+    openssl x509 -in "${ssl_cert_dir}/${DOMAIN}-fullchain.pem" \
+        -noout -subject -issuer -dates 2>/dev/null \
+        | sed 's/^/    /'
+    echo ""
+
+    # 4. 提示后续操作（Nginx / Apache / 其他服务需手动配置）
+    warn "提示：如需在 Nginx/Apache 等服务中使用此证书，请手动配置后重启对应服务"
+    warn "  Nginx 示例："
+    warn "    ssl_certificate     ${ssl_cert_dir}/${DOMAIN}-fullchain.pem;"
+    warn "    ssl_certificate_key ${ssl_key_dir}/${DOMAIN}.key;"
+
+    success "Debian 证书安装完成！"
+}
+
 update_ssl_certificates() {
-    echo -e "${GREEN}🔄 正在更新 SSL 证书 ...${RESET}"
-    if command -v pve-cert-sync &> /dev/null; then
-        pve-cert-sync
+    echo ""
+    echo -e "${CYAN}============================================${RESET}"
+    echo -e "${CYAN}  SSL 证书自动安装脚本  |  *.${DOMAIN}${RESET}"
+    echo -e "${CYAN}============================================${RESET}"
+    echo ""
+
+    check_root
+    download_certs
+
+    if is_pve; then
+        install_pve
+    elif is_debian; then
+        install_debian
     else
-        echo -e "${YELLOW}命令 pve-cert-sync 不存在，执行替代操作${RESET}"
-        # 检查 curl
-        require_command curl
-        bash <(curl -fsSL https://raw.githubusercontent.com/yduke/pve-cert-sync/main/install.sh)
-        pve-cert-sync
+        error "不支持的操作系统！"
+        error "此脚本仅支持 Proxmox VE 或 Debian 系统"
+        if [[ -f /etc/os-release ]]; then
+            error "当前系统信息："
+            grep -E '^(ID|NAME|VERSION)=' /etc/os-release | sed 's/^/    /' >&2
+        fi
+        exit 1
     fi
     read -p "完成！按回车返回主菜单..."
 }
