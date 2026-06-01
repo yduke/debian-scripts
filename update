@@ -154,6 +154,7 @@ system_menu() {
         echo -e "${CYAN}4)${RESET} 安装OpenClaw"
         echo -e "${CYAN}5)${RESET} 安装OpenClaw飞书 企业微信插件"
         echo -e "${YELLOW}6)${RESET} 限制日志文件大小300M"
+        echo -e "${YELLOW}7)${RESET} 日志清理（仅宝塔面板）"
         echo -e "${YELLOW}0)${RESET} 返回主菜单"
         read -p "请输入选项: " choice
         case "$choice" in
@@ -373,10 +374,309 @@ system_menu() {
                 echo -e "${GREEN}systemd-journald 已重启 日志大小300M限制已生效${RESET}"
                 read -p "按回车返回..."
                 ;;
+            7) bt_log_clean ;;
             0) break ;;
             *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
         esac
     done
+}
+
+
+
+
+# ---------- 4-7 宝塔面板日志清理（辅助函数）----------
+
+# 字节数转可读大小
+_bt_to_size() {
+    local size=$1
+    if   [ "$size" -ge $((1024*1024*1024)) ]; then echo "$(( size/1024/1024/1024 ))GB"
+    elif [ "$size" -ge $((1024*1024)) ];       then echo "$(( size/1024/1024 ))MB"
+    elif [ "$size" -ge 1024 ];                 then echo "$(( size/1024 ))KB"
+    else echo "${size}B"; fi
+}
+
+# 获取文件或目录字节大小
+_bt_get_size() {
+    if   [ -f "$1" ]; then stat -c '%s' "$1" 2>/dev/null || echo 0
+    elif [ -d "$1" ]; then du -sb "$1" 2>/dev/null | awk '{print $1}' || echo 0
+    else echo 0; fi
+}
+
+# 清空日志文件内容（保留文件）
+_bt_truncate() {
+    local f="$1"
+    [ -f "$f" ] || return
+    local sz; sz=$(_bt_get_size "$f")
+    BT_FREED=$(( BT_FREED + sz ))
+    > "$f"
+    info "已清空: $f  ($(_bt_to_size "$sz"))"
+}
+
+# 删除单个文件
+_bt_rm_file() {
+    local f="$1"
+    [ -f "$f" ] || return
+    local sz; sz=$(_bt_get_size "$f")
+    BT_FREED=$(( BT_FREED + sz ))
+    rm -f "$f"
+    info "已删除: $f  ($(_bt_to_size "$sz"))"
+}
+
+# 按扩展名清理目录（不递归）
+# 用法: _bt_clean_dir <目录> <扩展名|""> <最小字节> <1=清空|0=删除>
+_bt_clean_dir() {
+    local dir="$1" ext="$2" min_sz="${3:-0}" do_trunc="${4:-0}"
+    [ -d "$dir" ] || return
+    for f in "$dir"/*; do
+        [ -f "$f" ] || continue
+        [[ -n "$ext" && "$f" != *"$ext" ]] && continue
+        local sz; sz=$(_bt_get_size "$f")
+        [ "$sz" -le "$min_sz" ] && continue
+        BT_FREED=$(( BT_FREED + sz ))
+        if [ "$do_trunc" -eq 1 ]; then > "$f"; info "已清空: $f  ($(_bt_to_size "$sz"))"
+        else rm -f "$f";                       info "已删除: $f  ($(_bt_to_size "$sz"))"; fi
+    done
+}
+
+# 按扩展名递归清理目录
+_bt_clean_dir_r() {
+    local dir="$1" ext="$2" min_sz="${3:-0}" do_trunc="${4:-0}"
+    [ -d "$dir" ] || return
+    while IFS= read -r -d '' f; do
+        [[ -n "$ext" && "$f" != *"$ext" ]] && continue
+        local sz; sz=$(_bt_get_size "$f")
+        [ "$sz" -le "$min_sz" ] && continue
+        BT_FREED=$(( BT_FREED + sz ))
+        if [ "$do_trunc" -eq 1 ]; then > "$f"; info "已清空: $f  ($(_bt_to_size "$sz"))"
+        else rm -f "$f";                        info "已删除: $f  ($(_bt_to_size "$sz"))"; fi
+    done < <(find "$dir" -type f -print0 2>/dev/null)
+}
+
+# 1. 系统日志 /var/log
+_bt_clean_system_log() {
+    echo -e "${YELLOW}>>> [1/13] 系统登录日志${RESET}"
+    [ -d /var/log/audit ] && for f in /var/log/audit/*; do [ -f "$f" ] && _bt_truncate "$f"; done
+    for f in /var/log/*; do
+        [ -f "$f" ] || continue
+        [[ "$f" == *"maillog"* ]] && continue
+        [ "$(_bt_get_size "$f")" -lt 100 ] && continue
+        _bt_truncate "$f"
+    done
+}
+
+# 2. 面板遗留文件
+_bt_clean_panel_residue() {
+    echo -e "${YELLOW}>>> [2/13] 面板遗留文件${RESET}"
+    for f in /www/server/panel/testDisk_*; do [ -f "$f" ] && _bt_rm_file "$f"; done
+    [ -f /tmp/panelBoot.pl ] && _bt_rm_file /tmp/panelBoot.pl
+    for ext in .rpm .zip .gz; do
+        for f in /www/server/panel/install/*"$ext"; do [ -f "$f" ] && _bt_rm_file "$f"; done
+    done
+}
+
+# 3. 网站访问日志 /www/wwwlogs（清空不删除，避免 Nginx 报错）
+_bt_clean_www_log() {
+    echo -e "${YELLOW}>>> [3/13] 网站访问日志${RESET}"
+    for dir in /www/wwwlogs /www/wwwlogs/btwaf; do
+        [ -d "$dir" ] || continue
+        for f in "$dir"/*log*; do
+            [ -f "$f" ] || continue
+            [ "$(_bt_get_size "$f")" -lt 1024 ] && continue
+            BT_FREED=$(( BT_FREED + $(_bt_get_size "$f") ))
+            > "$f"; info "已清空: $f"
+        done
+    done
+}
+
+# 4. 堡塔防入侵日志
+_bt_clean_usranalyse_log() {
+    echo -e "${YELLOW}>>> [4/13] 堡塔防入侵日志${RESET}"
+    for dir in /usr/local/usranalyse/logs/log/www \
+               /usr/local/usranalyse/logs/total/www \
+               /usr/local/usranalyse/logs/log/root \
+               /usr/local/usranalyse/logs/total/root; do
+        _bt_clean_dir "$dir" ".txt" 1024 0
+    done
+}
+
+# 5. MySQL binlog（>1天 且 >1MB）
+_bt_clean_mysql_log() {
+    echo -e "${YELLOW}>>> [5/13] MySQL binlog${RESET}"
+    local mysql_dir
+    mysql_dir=$(grep -i 'datadir' /etc/my.cnf 2>/dev/null | awk -F'=' '{print $2}' | tr -d ' ' | head -1)
+    [ -z "$mysql_dir" ] && mysql_dir="/www/server/data"
+    if [ ! -d "$mysql_dir" ]; then warn "MySQL 数据目录 $mysql_dir 不存在，跳过"; return; fi
+    local count=0
+    while IFS= read -r f; do
+        [ -f "$f" ] || continue
+        local sz; sz=$(_bt_get_size "$f")
+        [ "$sz" -le $((1024*1024)) ] && continue
+        local age=$(( $(date +%s) - $(stat -c '%Y' "$f" 2>/dev/null || echo 0) ))
+        [ "$age" -lt 86400 ] && continue
+        BT_FREED=$(( BT_FREED + sz ))
+        rm -f "$f"; info "已删除 binlog: $f  ($(_bt_to_size "$sz"))"; (( count++ ))
+    done < <(find "$mysql_dir" -maxdepth 1 -name 'mysql-bin.0*' -type f 2>/dev/null)
+    [ "$count" -eq 0 ] && warn "没有需要清理的 binlog"
+}
+
+# 6. 宝塔回收站
+_bt_clean_recycle() {
+    echo -e "${YELLOW}>>> [6/13] 宝塔回收站${RESET}"
+    local rbin="/www/Recycle_bin"
+    [ -d "$rbin" ] || { warn "$rbin 不存在，跳过"; return; }
+    for item in "$rbin"/*; do
+        [ -e "$item" ] || continue
+        [[ "$item" != *"_bt_"* ]] && continue
+        local sz; sz=$(_bt_get_size "$item")
+        BT_FREED=$(( BT_FREED + sz ))
+        rm -rf "$item"; info "已清理回收站: $item  ($(_bt_to_size "$sz"))"
+    done
+}
+
+# 7. 邮件队列 & maillog
+_bt_clean_mail() {
+    echo -e "${YELLOW}>>> [7/13] 邮件队列 & maillog${RESET}"
+    if [ -d /var/spool ]; then
+        for dir in /var/spool/*/; do
+            local dname; dname=$(basename "$dir")
+            [[ "$dname" == "cron" || "$dname" == "anacron" ]] && continue
+            for f in "$dir"*; do
+                [ -f "$f" ] || continue
+                [ "$(_bt_get_size "$f")" -eq 0 ] && continue
+                local sz; sz=$(_bt_get_size "$f")
+                BT_FREED=$(( BT_FREED + sz ))
+                rm -f "$f"; info "已删除邮件: $f  ($(_bt_to_size "$sz"))"
+            done
+        done
+    fi
+    for f in /var/log/maillog*; do [ -f "$f" ] && _bt_truncate "$f"; done
+}
+
+# 8. PHP Session（find 批量，避免 glob 卡死）
+_bt_clean_php_session() {
+    echo -e "${YELLOW}>>> [8/13] PHP Session 文件${RESET}"
+    local stats count=0 total_sz=0
+    stats=$(find /tmp -maxdepth 1 -name 'sess_*' -type f -printf '%s\n' 2>/dev/null)
+    if [ -z "$stats" ]; then warn "无 PHP Session 文件"; return; fi
+    while IFS= read -r sz; do total_sz=$(( total_sz + sz )); (( count++ )); done <<< "$stats"
+    find /tmp -maxdepth 1 -name 'sess_*' -type f -delete 2>/dev/null
+    BT_FREED=$(( BT_FREED + total_sz ))
+    info "已清理 $count 个 PHP Session 文件  ($(_bt_to_size "$total_sz"))"
+}
+
+# 9. 网站统计报表
+_bt_clean_total_log() {
+    echo -e "${YELLOW}>>> [9/13] 网站统计报表${RESET}"
+    local total_config="/www/server/total/config.json"
+    [ -f "$total_config" ] || { warn "未安装网站统计模块，跳过"; return; }
+    local data_dir
+    data_dir=$(python3 -c "
+import json
+try:
+    c=json.load(open('$total_config'))
+    print(c.get('global',{}).get('data_dir',''))
+except: pass
+" 2>/dev/null)
+    [ -z "$data_dir" ] || [ ! -d "$data_dir" ] && { warn "无法读取统计报表目录，跳过"; return; }
+    local today_db; today_db=$(date +%Y%m%d).db
+    for item in "$data_dir"/*_bt_*; do
+        [ -d "$item" ] || continue
+        find "$item" -maxdepth 1 -type f \
+            ! -name "total.db" ! -name "$today_db" ! -name "update_day.log" | while read -r f; do
+            local fsz; fsz=$(_bt_get_size "$f")
+            BT_FREED=$(( BT_FREED + fsz ))
+            rm -f "$f"; info "已删除: $f  ($(_bt_to_size "$fsz"))"
+        done
+    done
+}
+
+# 10. PM2 日志
+_bt_clean_pm2() {
+    echo -e "${YELLOW}>>> [10/13] PM2 进程日志${RESET}"
+    _bt_clean_dir "/root/.pm2/logs" ".log" 1024 1
+}
+
+# 11. Docker 容器日志
+_bt_clean_docker() {
+    echo -e "${YELLOW}>>> [11/13] Docker 容器日志${RESET}"
+    _bt_clean_dir_r "/var/lib/docker/containers" ".log" 1024 1
+}
+
+# 12. 数据库 & 服务日志
+_bt_clean_services() {
+    echo -e "${YELLOW}>>> [12/13] 数据库 & 服务日志${RESET}"
+    # Redis（>10KB，清空）
+    [ -f /www/server/redis/redis.log ] && \
+        [ "$(_bt_get_size /www/server/redis/redis.log)" -gt $((10*1024)) ] && \
+        _bt_truncate /www/server/redis/redis.log
+    # MongoDB / Supervisor / fail2ban
+    _bt_clean_dir "/www/server/mongodb/logs" ".log" $((10*1024)) 1
+    _bt_clean_dir "/var/log/supervisor"       ".log" 1024         1
+    [ -f /var/log/fail2ban.log ] && \
+        [ "$(_bt_get_size /var/log/fail2ban.log)" -gt 1024 ] && \
+        _bt_truncate /var/log/fail2ban.log
+    # 防篡改 / 面板安装 / 计划任务 / 负载均衡 / 文件同步 / Node
+    _bt_truncate /www/server/panel/plugin/tamper_proof/service.log 2>/dev/null || true
+    _bt_clean_dir "/www/server/panel/logs/installed" ".log" 1024 0
+    _bt_clean_dir "/www/server/cron"                 ".log" 1024 0
+    _bt_clean_dir_r "/www/wwwlogs/load_balancing"    ".log" 0    1
+    _bt_clean_dir_r "/www/server/bt_sync/logs"       ".log" 0    1
+    _bt_truncate /www/server/bt_sync/run_logs.log  2>/dev/null || true
+    _bt_truncate /www/server/bt_sync/exec_logs.log 2>/dev/null || true
+    _bt_clean_dir_r "/root/.node-gyp" ".log" 0 0
+    # Nginx 缓存目录
+    for ndir in /www/server/nginx/proxy_cache_dir /www/server/nginx/client_body_temp; do
+        [ -d "$ndir" ] || continue
+        local sz; sz=$(_bt_get_size "$ndir")
+        find "$ndir" -type f -delete 2>/dev/null
+        BT_FREED=$(( BT_FREED + sz ))
+        info "已清理 Nginx 缓存: $ndir  ($(_bt_to_size "$sz"))"
+    done
+}
+
+# 13. 面板自身日志
+_bt_clean_panel_logs() {
+    echo -e "${YELLOW}>>> [13/13] 面板自身日志${RESET}"
+    local panel_log_dir="/www/server/panel/logs"
+    [ -d "$panel_log_dir" ] || { warn "$panel_log_dir 不存在，跳过"; return; }
+    for f in "$panel_log_dir"/*.log; do
+        [ -f "$f" ] || continue
+        [ "$(_bt_get_size "$f")" -lt 1024 ] && continue
+        _bt_truncate "$f"
+    done
+}
+
+# 主入口：供菜单 4->7 调用
+bt_log_clean() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo -e "${RED}[ERROR] 请以 root 用户运行此脚本${RESET}"; sleep 2; return
+    fi
+    BT_FREED=0
+    echo ""
+    echo -e "${CYAN}============================================${RESET}"
+    echo -e "${CYAN}    宝塔面板 日志 & 垃圾 自动清理${RESET}"
+    echo -e "${CYAN}============================================${RESET}"
+    echo "开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
+    echo ""
+    _bt_clean_system_log
+    _bt_clean_panel_residue
+    _bt_clean_www_log
+    _bt_clean_usranalyse_log
+    _bt_clean_mysql_log
+    _bt_clean_recycle
+    _bt_clean_mail
+    _bt_clean_php_session
+    _bt_clean_total_log
+    _bt_clean_pm2
+    _bt_clean_docker
+    _bt_clean_services
+    _bt_clean_panel_logs
+    echo ""
+    echo -e "${CYAN}============================================${RESET}"
+    echo -e "${GREEN}  清理完成！共释放: $(_bt_to_size "$BT_FREED")${RESET}"
+    echo "完成时间: $(date '+%Y-%m-%d %H:%M:%S')"
+    echo -e "${CYAN}============================================${RESET}"
+    read -p "按回车返回..."
 }
 
 
