@@ -15,6 +15,347 @@ BLUE="\e[1;34m"
 CYAN="\e[36m"
 RESET="\e[0m"
 
+# ---- 语言检测 / Language Detection ----
+LANG_MODE="zh"
+
+init_lang() {
+    if [ "$LANG_MODE" = "en" ]; then
+        # 主菜单
+        T_MAIN_TITLE="System Maintenance Tool"
+        T_OPT_1="1) Update packages + Upgrade + Clean"
+        T_OPT_2="2) Update and upgrade kernel"
+        T_OPT_3="3) Change software sources"
+        T_OPT_4="4) System management"
+        T_OPT_5="5) Update SSL certificate"
+        T_OPT_6="6) Docker install & management"
+        T_OPT_7="7) System check"
+        T_OPT_8="8) Self-update"
+        T_OPT_9="9) Switch language"
+        T_OPT_0="0) Exit"
+        T_PROMPT="Please select: "
+        T_INVALID="Invalid option"
+        T_EXIT="Exit."
+        # 软件包更新
+        T_UPDATING="Updating package list..."
+        T_UPGRADING="Upgrading packages..."
+        T_CLEANING="Cleaning up unnecessary packages..."
+        T_DONE="Done! Press Enter to return..."
+        T_PRESS_ENTER="Press Enter to return..."
+        # 内核升级
+        T_KERNEL_UPGRADE="Upgrading kernel and related packages..."
+        T_REBOOT_NEEDED="System needs a reboot!"
+        # 换源
+        T_FETCHING_SOURCES="Fetching source change script..."
+        # 系统管理子菜单
+        T_SYS_MGMT="----- System Management -----"
+        T_SSH_ENABLE="1) Enable SSH password login"
+        T_DDNS_INSTALL_UPDATE="2) Install or update ddns-go"
+        T_DDNS_UNINSTALL="3) Uninstall ddns-go"
+        T_OPENCLAW_INSTALL="4) Install OpenClaw"
+        T_OPENCLAW_PLUGINS="5) Install OpenClaw Feishu/WeCom plugins"
+        T_LOG_LIMIT="6) Limit log file size to 300M"
+        T_BT_CLEAN="7) Log cleanup (BT Panel only)"
+        T_RETURN_MAIN="0) Return to main menu"
+        T_SSH_ENABLING="Enabling SSH password login..."
+        T_ROOT_REQUIRED="Please run this script as root!"
+        T_PERMISSION_DENIED="Permission denied, exiting!"
+        T_SSH_INSTALLING="openssh-server not found, installing..."
+        T_SSH_INSTALLED="openssh-server is installed."
+        T_BACKUP_TO="Backup saved to"
+        T_SSH_RESTARTED="SSH service restarted. Remote password login is enabled."
+        T_SSH_LOGIN_INFO="You can now log in via SSH as root or regular user with password."
+        T_SSH_RESTART_FAIL="SSH service restart failed. Please check:"
+        T_DDNS_DONE_PREFIX="ddns-go "
+        T_DDNS_DONE_SUFFIX=" completed! Current version: "
+        T_DDNS_FETCHING="Fetching latest ddns-go version..."
+        T_DDNS_FETCH_FAIL="Failed to get latest version, exiting."
+        T_DDNS_RUNNING_UPDATE="ddns-go is running, performing update..."
+        T_DDNS_INSTALLED_UPDATE="ddns-go is installed but not running, performing update..."
+        T_DDNS_FRESH_INSTALL="ddns-go not found, performing fresh install..."
+        T_DDNS_STOPPING="Stopping ddns-go.service..."
+        T_DDNS_DOWNLOADING="Downloading latest ddns-go..."
+        T_DDNS_CACHED="Found local file, skipping download."
+        T_DDNS_UNINSTALLING_SVC="Uninstalling old ddns-go systemd service..."
+        T_DDNS_INSTALLING_SVC="Installing/updating systemd service..."
+        T_DDNS_STARTING="Starting ddns-go.service..."
+        T_ENABLING_AUTOSTART="Enabling auto-start..."
+        T_CLEANING_FILES="Cleaning up installation files..."
+        T_FW_ALLOWING="Configuring firewall..."
+        T_UFW_ALLOW="UFW detected, allowing port 9876..."
+        T_EXTRACTING="Extracting and overwriting..."
+        T_CREATING_DIR="Creating directory: "
+        T_LATEST_VER="Latest version: "
+        T_DOWNLOAD_URL="Download URL: "
+        T_DDNS_UNINSTALL_TITLE="Uninstall ddns-go"
+        T_DDNS_RUNNING_UNINSTALL="ddns-go is running, performing uninstall..."
+        T_DDNS_INSTALLED_UNINSTALL="ddns-go is installed but not running, performing uninstall..."
+        T_DDNS_NOT_INSTALLED="ddns-go is not installed."
+        T_DDNS_UNINSTALL_SVC="Uninstalling ddns-go systemd service..."
+        T_DDNS_UNINSTALL_DONE="Service uninstalled."
+        T_DDNS_UNINSTALL_COMPLETE="ddns-go uninstalled!"
+        T_WEB_ACCESS="Web UI access: http://YOUR_IP:9876"
+        T_WEB_ACCESS_IP="Web UI access: http://"
+        T_OPENCLAW_START="Installing OpenClaw..."
+        T_LOG_LIMIT_START="Limiting log file size to 300M..."
+        T_LOG_LIMIT_INFO="This will modify journald config to limit logs to 300M"
+        T_LOG_LIMIT_SET="SystemMaxUse set to 300M, restarting journald..."
+        T_LOG_LIMIT_DONE="systemd-journald restarted. 300M log limit is active."
+        # Docker 菜单
+        T_DOCKER_TITLE="----- Docker Management -----"
+        T_DOCKER_INSTALL="1) Install Docker"
+        T_DOCKER_MIRROR="2) Change Docker mirror source"
+        T_DOCKER_INSTALLING="Installing Docker..."
+        T_DOCKER_MIRROR_MSG="Changing Docker mirror source..."
+        # 系统检查
+        T_CHECK_TITLE="----- System Check -----"
+        T_CHECK_REBOOT="1) Check if reboot is needed"
+        T_CHECK_DISK="2) View disk space"
+        T_CHECK_DISK_TOP="3) View largest directories"
+        T_CHECK_LOG="4) View recent system logs"
+        T_CHECK_CPU="5) View CPU usage"
+        T_CHECK_MEM="6) View memory usage"
+        T_CHECK_SYSINFO="7) View system info"
+        T_CHECK_KERNEL="8) View kernel version"
+        T_CHECK_FAILED="9) View failed services"
+        T_CHECK_IP="10) View IP address"
+        T_NO_REBOOT="No reboot needed."
+        T_DISK_USAGE="Disk usage:"
+        T_FINDING_DIR="Searching for large directories, please wait..."
+        T_RECENT_LOG="Recent 50 lines of system log:"
+        T_CPU_USAGE="CPU usage:"
+        T_MEM_USAGE="Memory usage:"
+        T_MEM_USAGE_STR=" used "
+        T_MEM_USAGE_PCT="%"
+        T_MEM_USAGE_OF=" of "
+        T_SYS_CONFIG="System configuration:"
+        T_KERNEL_VER="Kernel version:"
+        T_FAILED_SVC="Failed services:"
+        T_NO_FAILED_SVC="No failed services."
+        T_IP_ADDR="IP address:"
+        # 脚本更新
+        T_SELF_UPDATING="Updating script..."
+        T_SELF_UPDATED="Script updated to latest version!"
+        T_SELF_RESTART="Script needs to restart to take effect."
+        T_SELF_EXIT="Press Enter to exit. Run 'update' again to use the new version."
+        # 宝塔日志
+        T_BT_TITLE="BT Panel - Log & Garbage Cleanup"
+        T_START_TIME="Start time: "
+        T_END_TIME="End time: "
+        T_BT_DONE="Cleanup complete! Freed: "
+        # SSL 证书
+        T_SSL_TITLE="SSL Certificate Auto Installer"
+        T_OS_UNSUPPORTED="Unsupported OS!"
+        T_OS_SUPPORT_INFO="This script only supports Proxmox VE or Debian"
+        T_OS_INFO="Current system info:"
+        T_DEBIAN_DETECTED="Debian system detected"
+        T_CA_INSTALLING="Adding CA certificate to system trust chain..."
+        T_CA_UPDATED="System CA trust chain updated."
+        T_DEPLOYING_CERT="Deploying certificate files..."
+        T_CERT_DEPLOYED="Certificates deployed to:"
+        T_CERT_VERIFY="Certificate verification:"
+        T_CERT_HINT="Hint: To use these certificates in Nginx/Apache, configure and restart the service."
+        T_CERT_NGINX_EXAMPLE1="  Nginx example:"
+        T_CERT_NGINX_EXAMPLE2='    ssl_certificate     /etc/ssl/certs/'
+        T_CERT_NGINX_EXAMPLE3='    ssl_certificate_key /etc/ssl/private/'
+        T_DEBIAN_CERT_DONE="Debian certificate installation complete!"
+        T_PVE_DETECTED="Proxmox VE system detected, node: "
+        T_CERT_BACKUP_TO="Old certificates backed up to"
+        T_PVE_FORCE_UPDATE="Running pvecm updatecerts --force..."
+        T_PVE_UPDATE_DONE="pvecm updatecerts completed."
+        T_INSTALLING_CERT_TO="Installing new certificates to"
+        T_CERT_WRITTEN="Certificate files written to"
+        T_RESTARTING_PVEPROXY="Restarting pveproxy service..."
+        T_PVEPROXY_RESTARTED="pveproxy restarted successfully."
+        T_PVEPROXY_FAIL="pveproxy restart failed, check logs:"
+        T_PVE_CERT_DONE="PVE certificate installation complete! Visit"
+        T_DOWNLOADING_CERTS="Downloading certificate files from"
+        T_DOWNLOAD_FAIL="Download failed: "
+        T_CHECK_SERVER="Please verify the server is accessible and you are on the LAN."
+        T_CERTS_DOWNLOADED="Certificate files downloaded to"
+        # 内存信息
+        T_MEM_TOTAL="Total"
+        T_MEM_USED="Used"
+    else
+        T_MAIN_TITLE="系统维护工具"
+        T_OPT_1="1) 更新软件包 + 升级 + 清理"
+        T_OPT_2="2) 更新并升级内核"
+        T_OPT_3="3) 设置软件源"
+        T_OPT_4="4) 系统管理"
+        T_OPT_5="5) 更新 SSL 证书（请勿尝试）"
+        T_OPT_6="6) Docker 安装与管理"
+        T_OPT_7="7) 系统检查"
+        T_OPT_8="8) 更新脚本"
+        T_OPT_9="9) 切换语言"
+        T_OPT_0="0) 退出"
+        T_PROMPT="请输入选项: "
+        T_INVALID="无效选项"
+        T_EXIT="退出。"
+        T_UPDATING="开始更新软件包列表..."
+        T_UPGRADING="开始升级软件包..."
+        T_CLEANING="开始清理不需要的软件包..."
+        T_DONE="完成！按回车返回..."
+        T_PRESS_ENTER="按回车返回..."
+        T_KERNEL_UPGRADE="开始升级内核及相关软件包..."
+        T_REBOOT_NEEDED="系统需要重启！"
+        T_FETCHING_SOURCES="正在获取换源脚本 ..."
+        T_SYS_MGMT="----- 系统管理 -----"
+        T_SSH_ENABLE="1) 开启SSH远程密码登录"
+        T_DDNS_INSTALL_UPDATE="2) 安装或更新 ddns-go"
+        T_DDNS_UNINSTALL="3) 卸载 ddns-go"
+        T_OPENCLAW_INSTALL="4) 安装OpenClaw"
+        T_OPENCLAW_PLUGINS="5) 安装OpenClaw飞书 企业微信插件"
+        T_LOG_LIMIT="6) 限制日志文件大小300M"
+        T_BT_CLEAN="7) 日志清理（仅宝塔面板）"
+        T_RETURN_MAIN="0) 返回主菜单"
+        T_SSH_ENABLING="🔧 开启 SSH 远程密码登录..."
+        T_ROOT_REQUIRED="请使用 root 用户运行此脚本！"
+        T_PERMISSION_DENIED="权限不足，退出！"
+        T_SSH_INSTALLING="系统未安装 openssh-server，正在安装..."
+        T_SSH_INSTALLED="openssh-server 已安装。"
+        T_BACKUP_TO="已备份原始配置到"
+        T_SSH_RESTARTED="SSH 服务已重启，远程登录已开启。"
+        T_SSH_LOGIN_INFO="你现在可以使用 root 或普通用户通过密码远程登录 SSH。"
+        T_SSH_RESTART_FAIL="SSH 服务重启失败，请重试或手动检查配置文件："
+        T_DDNS_DONE_PREFIX="ddns-go "
+        T_DDNS_DONE_SUFFIX=" 完成！当前版本："
+        T_DDNS_FETCHING="开始查询 ddns-go 最新版本..."
+        T_DDNS_FETCH_FAIL="获取最新版本失败，退出。"
+        T_DDNS_RUNNING_UPDATE="检测到 ddns-go 正在运行，将执行更新操作..."
+        T_DDNS_INSTALLED_UPDATE="检测到 ddns-go 已安装但未运行，将执行更新操作..."
+        T_DDNS_FRESH_INSTALL="ddns-go 未安装，将执行全新安装..."
+        T_DDNS_STOPPING="停止 ddns-go.service ..."
+        T_DDNS_DOWNLOADING="下载最新版 ddns-go..."
+        T_DDNS_CACHED="发现本地已存在，跳过下载。"
+        T_DDNS_UNINSTALLING_SVC="卸载旧的 ddns-go systemd 服务..."
+        T_DDNS_INSTALLING_SVC="安装/更新 systemd 服务..."
+        T_DDNS_STARTING="启动 ddns-go.service..."
+        T_ENABLING_AUTOSTART="设置开机自启..."
+        T_CLEANING_FILES="清理安装文件..."
+        T_FW_ALLOWING="防火墙放行..."
+        T_UFW_ALLOW="检测到 UFW，放行端口 9876..."
+        T_EXTRACTING="解压覆盖..."
+        T_CREATING_DIR="创建目录: "
+        T_LATEST_VER="最新版本: "
+        T_DOWNLOAD_URL="下载地址: "
+        T_DDNS_UNINSTALL_TITLE="卸载 ddns-go"
+        T_DDNS_RUNNING_UNINSTALL="检测到 ddns-go 正在运行，将执行卸载..."
+        T_DDNS_INSTALLED_UNINSTALL="检测到 ddns-go 已安装但未运行，将执行卸载操作..."
+        T_DDNS_NOT_INSTALLED="ddns-go 未安装，无需卸载"
+        T_DDNS_UNINSTALL_SVC="卸载 ddns-go systemd 服务..."
+        T_DDNS_UNINSTALL_DONE="服务卸载完成。"
+        T_DDNS_UNINSTALL_COMPLETE="ddns-go 卸载完成！"
+        T_WEB_ACCESS="Web 界面访问: http://你的IP:9876"
+        T_WEB_ACCESS_IP="Web 界面访问: http://"
+        T_OPENCLAW_START="开始安装 OpenClaw..."
+        T_LOG_LIMIT_START="限制日志文件大小到300M ..."
+        T_LOG_LIMIT_INFO="此功能会修改日志设置文件以保证日志文件不会超过300M"
+        T_LOG_LIMIT_SET="已将 SystemMaxUse 设置为 300M，准备重启日志服务"
+        T_LOG_LIMIT_DONE="systemd-journald 已重启 日志大小300M限制已生效"
+        T_DOCKER_TITLE="----- Docker 管理 -----"
+        T_DOCKER_INSTALL="1) 安装 Docker"
+        T_DOCKER_MIRROR="2) 更换 Docker 镜像加速源"
+        T_DOCKER_INSTALLING="安装 Docker ..."
+        T_DOCKER_MIRROR_MSG="更换 Docker 镜像加速源 ..."
+        T_CHECK_TITLE="----- 系统检查 -----"
+        T_CHECK_REBOOT="1) 检查是否需要重启"
+        T_CHECK_DISK="2) 查看磁盘空间"
+        T_CHECK_DISK_TOP="3) 查看磁盘占用最大的目录"
+        T_CHECK_LOG="4) 查看最近系统日志"
+        T_CHECK_CPU="5) 查看 CPU 使用"
+        T_CHECK_MEM="6) 查看内存使用"
+        T_CHECK_SYSINFO="7) 查看系统配置"
+        T_CHECK_KERNEL="8) 查看内核版本"
+        T_CHECK_FAILED="9) 查看失败服务"
+        T_CHECK_IP="10) 查看IP地址"
+        T_NO_REBOOT="不需要重启。"
+        T_DISK_USAGE="磁盘空间使用情况："
+        T_FINDING_DIR="正在查找大尺寸目录，请稍候..."
+        T_RECENT_LOG="最近 50 行系统日志："
+        T_CPU_USAGE="CPU 使用情况："
+        T_MEM_USAGE="内存使用情况："
+        T_MEM_USAGE_STR=" 已使用 "
+        T_MEM_USAGE_PCT="%"
+        T_MEM_USAGE_OF="，使用了 "
+        T_SYS_CONFIG="当前系统配置："
+        T_KERNEL_VER="当前内核版本："
+        T_FAILED_SVC="查看失败服务："
+        T_NO_FAILED_SVC="当前没有失败服务"
+        T_IP_ADDR="当前 IP 地址："
+        T_SELF_UPDATING="正在更新脚本..."
+        T_SELF_UPDATED="脚本已更新到最新版本！"
+        T_SELF_RESTART="需要重启脚本生效。"
+        T_SELF_EXIT="按回车退出脚本，你需要再次执行update使用新版。"
+        T_BT_TITLE="宝塔面板 日志 & 垃圾 自动清理"
+        T_START_TIME="开始时间: "
+        T_END_TIME="完成时间: "
+        T_BT_DONE="清理完成！共释放: "
+        T_SSL_TITLE="SSL 证书自动安装脚本"
+        T_OS_UNSUPPORTED="不支持的操作系统！"
+        T_OS_SUPPORT_INFO="此脚本仅支持 Proxmox VE 或 Debian 系统"
+        T_OS_INFO="当前系统信息："
+        T_DEBIAN_DETECTED="检测到 Debian 系统"
+        T_CA_INSTALLING="将 CA 证书添加到系统信任链..."
+        T_CA_UPDATED="系统 CA 信任链已更新"
+        T_DEPLOYING_CERT="部署证书文件..."
+        T_CERT_DEPLOYED="证书已部署到："
+        T_CERT_VERIFY="证书信息验证："
+        T_CERT_HINT="提示：如需在 Nginx/Apache 等服务中使用此证书，请手动配置后重启对应服务"
+        T_CERT_NGINX_EXAMPLE1="  Nginx 示例："
+        T_CERT_NGINX_EXAMPLE2='    ssl_certificate     /etc/ssl/certs/'
+        T_CERT_NGINX_EXAMPLE3='    ssl_certificate_key /etc/ssl/private/'
+        T_DEBIAN_CERT_DONE="Debian 证书安装完成！"
+        T_PVE_DETECTED="检测到 Proxmox VE 系统，节点名："
+        T_CERT_BACKUP_TO="旧证书已备份至"
+        T_PVE_FORCE_UPDATE="执行 pvecm updatecerts --force 重置证书..."
+        T_PVE_UPDATE_DONE="pvecm updatecerts 完成"
+        T_INSTALLING_CERT_TO="安装新证书到"
+        T_CERT_WRITTEN="证书文件已写入"
+        T_RESTARTING_PVEPROXY="重启 pveproxy 服务..."
+        T_PVEPROXY_RESTARTED="pveproxy 已成功重启"
+        T_PVEPROXY_FAIL="pveproxy 重启失败，请检查日志："
+        T_PVE_CERT_DONE="PVE 证书安装完成！访问"
+        T_DOWNLOADING_CERTS="正在从 下载证书文件..."
+        T_DOWNLOAD_FAIL="下载失败："
+        T_CHECK_SERVER="请确认服务可访问，且当前机器在局域网内"
+        T_CERTS_DOWNLOADED="证书文件下载完成，存放于"
+        T_MEM_TOTAL="总内存"
+        T_MEM_USED="已使用"
+    fi
+}
+
+auto_detect_lang() {
+    local charmap lang_var
+    charmap=$(locale charmap 2>/dev/null || echo "")
+    if [ -n "$charmap" ] && [ "$charmap" != "UTF-8" ] && [ "$charmap" != "utf8" ]; then
+        LANG_MODE="en"
+        return
+    fi
+    lang_var=$(locale 2>/dev/null | grep -E '^LANG=|^LC_ALL=' | head -1 | cut -d= -f2)
+    if echo "$lang_var" | grep -qi 'zh_CN\|zh\.' >/dev/null 2>&1; then
+        LANG_MODE="zh"
+    else
+        LANG_MODE="en"
+    fi
+}
+
+toggle_lang() {
+    if [ "$LANG_MODE" = "en" ]; then LANG_MODE="zh"; else LANG_MODE="en"; fi
+    init_lang
+}
+
+# 初始化语言
+auto_detect_lang
+if [ -n "$UPDATE_LANG" ]; then
+    case "$UPDATE_LANG" in
+        en|EN|english|English) LANG_MODE="en" ;;
+        zh|ZH|chinese|Chinese) LANG_MODE="zh" ;;
+    esac
+fi
+init_lang
+
+# 保存最初的命令行参数，供主菜单语言切换使用
+ORIG_ARGS=("$@")
+
 # 检查并安装命令
 # 用法: require_command <命令名> [<包名>]
 # 例如检查确保curl已安装：
@@ -24,10 +365,13 @@ RESET="\e[0m"
 
 require_command() {
     local cmd=$1
-    local pkg=${2:-$cmd}  # 默认包名和命令名相同
+    local pkg=${2:-$cmd}
     if ! command -v "$cmd" >/dev/null 2>&1; then
-        echo -e "${YELLOW}未检测到 $cmd，正在安装 $pkg...${RESET}"
-        # 只在需要安装时再更新 apt，避免每次都 update
+        if [ "$LANG_MODE" = "en" ]; then
+            echo -e "${YELLOW}$cmd not found, installing $pkg...${RESET}"
+        else
+            echo -e "${YELLOW}未检测到 $cmd，正在安装 $pkg...${RESET}"
+        fi
         apt update -y
         apt install -y "$pkg"
     fi
@@ -58,7 +402,7 @@ get_ipv4() {
         return
     fi
 
-    echo "无法自动获取 IP"
+    echo "NO_IP"
 }
 SERVER_IP=$(get_ipv4)
 
@@ -78,21 +422,22 @@ main_menu() {
     while true; do
         clear
         echo -e "${BLUE}=============================${RESET}"
-        echo -e "${BLUE}       系统维护工具${RESET}"
+        echo -e "${BLUE}       ${T_MAIN_TITLE}${RESET}"
         echo -e "${BLUE}  System Maintenance Tool${RESET}"
         echo -e "${BLUE}       by Duke Yin${RESET}"
         echo -e "${BLUE}=============================${RESET}"
-        echo -e "${YELLOW}1)${RESET} 更新软件包 + 升级 + 清理"
-        echo -e "${YELLOW}2)${RESET} 更新并升级内核"
-        echo -e "${YELLOW}3)${RESET} 设置软件源"
-        echo -e "${YELLOW}4)${RESET} 系统管理"
-        echo -e "${YELLOW}5)${RESET} 更新 SSL 证书（请勿尝试）"
-        echo -e "${YELLOW}6)${RESET} Docker 安装与管理"
-        echo -e "${YELLOW}7)${RESET} 系统检查"
-        echo -e "${YELLOW}8)${RESET} 更新脚本"
-        echo -e "${YELLOW}0)${RESET} 退出"
+        echo -e "${YELLOW}${T_OPT_1}${RESET}"
+        echo -e "${YELLOW}${T_OPT_2}${RESET}"
+        echo -e "${YELLOW}${T_OPT_3}${RESET}"
+        echo -e "${YELLOW}${T_OPT_4}${RESET}"
+        echo -e "${YELLOW}${T_OPT_5}${RESET}"
+        echo -e "${YELLOW}${T_OPT_6}${RESET}"
+        echo -e "${YELLOW}${T_OPT_7}${RESET}"
+        echo -e "${YELLOW}${T_OPT_8}${RESET}"
+        echo -e "${YELLOW}${T_OPT_9}${RESET}"
+        echo -e "${YELLOW}${T_OPT_0}${RESET}"
         echo -e "${BLUE}-----------------------------${RESET}"
-        read -p "请输入选项: " choice
+        read -p "${T_PROMPT}" choice
 
         case "$choice" in
             1) update_system ;;
@@ -103,43 +448,44 @@ main_menu() {
             6) docker_menu ;;
             7) system_check_menu ;;
             8) self_update ;;
-            0) echo -e "${GREEN}退出。${RESET}"; exit 0 ;;
-            *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
+            9) toggle_lang ;;
+            0) echo -e "${GREEN}${T_EXIT}${RESET}"; exit 0 ;;
+            *) echo -e "${RED}${T_INVALID}${RESET}"; sleep 1 ;;
         esac
     done
 }
 
 # ---------- 1 更新软件包 + 升级 + 清理 ----------
 update_system() {
-    echo -e "${GREEN}开始更新软件包列表...${RESET}"
+    echo -e "${GREEN}${T_UPDATING}${RESET}"
     apt update -y
-    echo -e "${GREEN}开始升级软件包...${RESET}"
+    echo -e "${GREEN}${T_UPGRADING}${RESET}"
     apt upgrade -y
-    echo -e "${GREEN}开始清理不需要的软件包...${RESET}"
+    echo -e "${GREEN}${T_CLEANING}${RESET}"
     apt autoremove -y
     apt clean
-    read -p "完成！按回车返回主菜单..."
+    read -p "${T_DONE}"
 }
 
 # ---------- 2 升级内核 ----------
 upgrade_kernel() {
-    echo -e "${GREEN}开始升级内核及相关软件包...${RESET}"
+    echo -e "${GREEN}${T_KERNEL_UPGRADE}${RESET}"
     apt update -y
     apt full-upgrade -y
     apt autoremove --purge -y
     if [ -f /var/run/reboot-required ]; then
-        echo -e "${RED}系统需要重启！${RESET}"
+        echo -e "${RED}${T_REBOOT_NEEDED}${RESET}"
     fi
-    read -p "按回车返回主菜单..."
+    read -p "${T_PRESS_ENTER}"
 }
 
 # ---------- 3 更换软件源 ----------
 change_sources() {
-    echo -e "${GREEN}正在获取换源脚本 ...${RESET}"
+    echo -e "${GREEN}${T_FETCHING_SOURCES}${RESET}"
     # 检查 curl
     require_command curl
     bash <(curl -sSL https://linuxmirrors.cn/main.sh)
-    read -p "按回车返回主菜单..."
+    read -p "${T_PRESS_ENTER}"
 }
 
 
@@ -147,197 +493,182 @@ change_sources() {
 system_menu() {
     while true; do
         clear
-        echo -e "${BLUE}----- 系统管理 -----${RESET}"
-        echo -e "${YELLOW}1)${RESET} 开启SSH远程密码登录"
-        echo -e "${YELLOW}2)${RESET} 安装或更新 ddns-go"
-        echo -e "${RED}3) 卸载 ddns-go${RESET}"
-        echo -e "${CYAN}4)${RESET} 安装OpenClaw"
-        echo -e "${CYAN}5)${RESET} 安装OpenClaw飞书 企业微信插件"
-        echo -e "${YELLOW}6)${RESET} 限制日志文件大小300M"
-        echo -e "${YELLOW}7)${RESET} 日志清理（仅宝塔面板）"
-        echo -e "${YELLOW}0)${RESET} 返回主菜单"
-        read -p "请输入选项: " choice
+        echo -e "${BLUE}${T_SYS_MGMT}${RESET}"
+        echo -e "${YELLOW}${T_SSH_ENABLE}${RESET}"
+        echo -e "${YELLOW}${T_DDNS_INSTALL_UPDATE}${RESET}"
+        echo -e "${RED}${T_DDNS_UNINSTALL}${RESET}"
+        echo -e "${CYAN}${T_OPENCLAW_INSTALL}${RESET}"
+        echo -e "${CYAN}${T_OPENCLAW_PLUGINS}${RESET}"
+        echo -e "${YELLOW}${T_LOG_LIMIT}${RESET}"
+        echo -e "${YELLOW}${T_BT_CLEAN}${RESET}"
+        echo -e "${YELLOW}${T_RETURN_MAIN}${RESET}"
+        read -p "${T_PROMPT}" choice
         case "$choice" in
             1)
-                echo -e "${GREEN}🔧 开启 SSH 远程密码登录...${RESET}"
-                # 确保以 root 用户运行
+                echo -e "${GREEN}${T_SSH_ENABLING}${RESET}"
                 if [ "$EUID" -ne 0 ]; then
-                    echo -e "${YELLOW}请使用 root 用户运行此脚本！${RESET}"
-                    echo -e "${YELLOW}权限不足，退出！${RESET}"
+                    echo -e "${YELLOW}${T_ROOT_REQUIRED}${RESET}"
+                    echo -e "${YELLOW}${T_PERMISSION_DENIED}${RESET}"
                     exit 1
                 fi
 
                 SSHD_CONFIG="/etc/ssh/sshd_config"
 
-                # 检查 openssh-server 是否安装
                 if ! dpkg -l | grep -qw openssh-server; then
-                    echo -e "${YELLOW}系统未安装 openssh-server，正在安装...${RESET}"
+                    echo -e "${YELLOW}${T_SSH_INSTALLING}${RESET}"
                     apt update
                     apt install -y openssh-server
                 else
-                    echo -e "${GREEN}openssh-server 已安装。${RESET}"
+                    echo -e "${GREEN}${T_SSH_INSTALLED}${RESET}"
                 fi
 
-                # 备份原始配置文件
                 BACKUP_FILE="/etc/ssh/sshd_config.bak.$(date +%F-%T)"
                 cp "$SSHD_CONFIG" "$BACKUP_FILE"
-                echo -e "${GREEN}已备份原始配置到 $BACKUP_FILE${RESET}"
+                echo -e "${GREEN}${T_BACKUP_TO} $BACKUP_FILE${RESET}"
 
-                # 修改或添加 PermitRootLogin yes
                 if grep -qE "^\s*PermitRootLogin" "$SSHD_CONFIG"; then
                     sed -i "s/^\s*PermitRootLogin.*/PermitRootLogin yes/" "$SSHD_CONFIG"
                 else
                     echo "PermitRootLogin yes" >> "$SSHD_CONFIG"
                 fi
 
-                # 修改或添加 PasswordAuthentication yes
                 if grep -qE "^\s*PasswordAuthentication" "$SSHD_CONFIG"; then
                     sed -i "s/^\s*PasswordAuthentication.*/PasswordAuthentication yes/" "$SSHD_CONFIG"
                 else
                     echo "PasswordAuthentication yes" >> "$SSHD_CONFIG"
                 fi
 
-                # 确保 SSH 服务启动
                 systemctl enable ssh
 
-                # 重启 SSH 服务
                 systemctl restart ssh
                 if [ $? -eq 0 ]; then
-                    echo -e "${GREEN}SSH 服务已重启，远程登录已开启。${RESET}"
-                    echo -e "${GREEN}你现在可以使用 root 或普通用户通过密码远程登录 SSH。${RESET}"
+                    echo -e "${GREEN}${T_SSH_RESTARTED}${RESET}"
+                    echo -e "${GREEN}${T_SSH_LOGIN_INFO}${RESET}"
                 else
-                    echo -e "${RED}SSH 服务重启失败，请重试或手动检查配置文件：$SSHD_CONFIG${RESET}"
+                    echo -e "${RED}${T_SSH_RESTART_FAIL} $SSHD_CONFIG${RESET}"
                 fi
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             2)
                 INSTALL_DIR="/usr/local/ddns-go"
                 SERVICE_FILE="/etc/systemd/system/ddns-go.service"
 
-                echo -e "${GREEN}开始查询 ddns-go 最新版本...${RESET}"
+                echo -e "${GREEN}${T_DDNS_FETCHING}${RESET}"
                 require_command curl
 
                 LATEST_VERSION=$(curl -s https://api.github.com/repos/jeessy2/ddns-go/releases/latest | grep tag_name | cut -d '"' -f 4)
 
                 if [ -z "$LATEST_VERSION" ]; then
-                    echo -e "${RED}获取最新版本失败，退出。${RESET}"
+                    echo -e "${RED}${T_DDNS_FETCH_FAIL}${RESET}"
                     exit 1
                 fi
 
-                echo -e "${GREEN}最新版本: $LATEST_VERSION${RESET}"
+                echo -e "${GREEN}${T_LATEST_VER}${LATEST_VERSION}${RESET}"
 
-                # 构造下载 URL
                 TAR_FILE="ddns-go_${LATEST_VERSION#v}_linux_x86_64.tar.gz"
                 DOWNLOAD_URL="https://github.com/jeessy2/ddns-go/releases/download/${LATEST_VERSION}/${TAR_FILE}"
 
-                echo -e "${GREEN}下载地址: $DOWNLOAD_URL${RESET}"
+                echo -e "${GREEN}${T_DOWNLOAD_URL}${DOWNLOAD_URL}${RESET}"
 
-                # 判断是否已经安装
                 if systemctl is-active --quiet ddns-go.service; then
                     MODE="update"
-                    echo -e "${GREEN}检测到 ddns-go 正在运行，将执行更新操作...${RESET}"
+                    echo -e "${GREEN}${T_DDNS_RUNNING_UPDATE}${RESET}"
                 else
                     if [ -f "$SERVICE_FILE" ]; then
                         MODE="update"
-                        echo -e "${GREEN}检测到 ddns-go 已安装但未运行，将执行更新操作...${RESET}"
+                        echo -e "${GREEN}${T_DDNS_INSTALLED_UPDATE}${RESET}"
                     else
                         MODE="install"
-                        echo -e "${GREEN}ddns-go 未安装，将执行全新安装...${RESET}"
+                        echo -e "${GREEN}${T_DDNS_FRESH_INSTALL}${RESET}"
                     fi
                 fi
 
-                # 停止服务（如已安装）
                 if [ "$MODE" = "update" ]; then
-                    echo -e "${GREEN}停止 ddns-go.service ...${RESET}"
+                    echo -e "${GREEN}${T_DDNS_STOPPING}${RESET}"
                     systemctl stop ddns-go.service || true
                 fi
 
-                echo -e "${GREEN}创建目录: $INSTALL_DIR${RESET}"
+                echo -e "${GREEN}${T_CREATING_DIR}${INSTALL_DIR}${RESET}"
                 mkdir -p "$INSTALL_DIR"
                 cd "$INSTALL_DIR"
 
-                echo -e "${GREEN}下载最新版 ddns-go...${RESET}"
+                echo -e "${GREEN}${T_DDNS_DOWNLOADING}${RESET}"
                 if [ -f "$TAR_FILE" ]; then
-                    echo -e "${GREEN}发现本地已存在 $TAR_FILE ，跳过下载。${RESET}"
+                    echo -e "${GREEN}${T_DDNS_CACHED}${RESET}"
                 else
-                    echo -e "${GREEN}正在下载 $TAR_FILE ...${RESET}"
                     wget -O "$TAR_FILE" "$DOWNLOAD_URL"
                 fi
 
-                echo -e "${GREEN}解压覆盖...${RESET}"
+                echo -e "${GREEN}${T_EXTRACTING}${RESET}"
                 tar -zxvf "$TAR_FILE"
                 if [ "$MODE" = "update" ]; then
-                    echo -e "${GREEN}卸载旧的 ddns-go systemd 服务...${RESET}"
+                    echo -e "${GREEN}${T_DDNS_UNINSTALLING_SVC}${RESET}"
                     "${INSTALL_DIR}/ddns-go" -s uninstall || true
-                    echo -e "${GREEN}旧服务卸载完成。${RESET}"
                 fi
-                echo -e "${GREEN}安装/更新 systemd 服务...${RESET}"
+                echo -e "${GREEN}${T_DDNS_INSTALLING_SVC}${RESET}"
                 "${INSTALL_DIR}/ddns-go" -s install
 
-                echo -e "${GREEN}重载 systemctl...${RESET}"
                 systemctl daemon-reload
 
-                echo -e "${GREEN}启动 ddns-go.service...${RESET}"
+                echo -e "${GREEN}${T_DDNS_STARTING}${RESET}"
                 systemctl start ddns-go.service
 
-                echo -e "${GREEN}设置开机自启...${RESET}"
+                echo -e "${GREEN}${T_ENABLING_AUTOSTART}${RESET}"
                 systemctl enable ddns-go.service
 
-                echo -e "${GREEN}清理安装文件...${RESET}"
+                echo -e "${GREEN}${T_CLEANING_FILES}${RESET}"
                 rm -f "$TAR_FILE"
                 rm -f "${INSTALL_DIR}/README_EN.md"
                 rm -f "${INSTALL_DIR}/README.md"
                 rm -f "${INSTALL_DIR}/LICENSE"
 
-                echo -e "${GREEN}防火墙放行...${RESET}"
+                echo -e "${GREEN}${T_FW_ALLOWING}${RESET}"
                 if command -v ufw >/dev/null 2>&1; then
-                    echo -e "${GREEN}检测到 UFW，放行端口 9876...${RESET}"
+                    echo -e "${GREEN}${T_UFW_ALLOW}${RESET}"
                     ufw allow 9876/tcp || true
                 fi
 
-                echo -e "${GREEN}ddns-go $MODE 完成！当前版本：$LATEST_VERSION${RESET}"
-   
-                if [[ "$SERVER_IP" = "无法自动获取 IP" ]]; then
-                    echo -e "${YELLOW}Web 界面访问: http://你的IP:9876${RESET}"
+                echo -e "${GREEN}${T_DDNS_DONE_PREFIX}${MODE}${T_DDNS_DONE_SUFFIX}${LATEST_VERSION}${RESET}"
+
+                if [[ "$SERVER_IP" = "NO_IP" ]]; then
+                    echo -e "${YELLOW}${T_WEB_ACCESS}${RESET}"
                 else
-                    echo -e "${GREEN}Web 界面访问: http://$SERVER_IP:9876${RESET}"
+                    echo -e "${GREEN}${T_WEB_ACCESS_IP}${SERVER_IP}:9876${RESET}"
                 fi
 
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             3)
-                echo -e "${RED}卸载 ddns-go${RESET}"
+                echo -e "${RED}${T_DDNS_UNINSTALL_TITLE}${RESET}"
                 INSTALL_DIR="/usr/local/ddns-go"
                 SERVICE_FILE="/etc/systemd/system/ddns-go.service"
-                # 判断是否已经安装
                 if systemctl is-active --quiet ddns-go.service; then
                     MODE="uninstall"
-                    echo -e "${GREEN}检测到 ddns-go 正在运行，将执行卸载...${RESET}"
+                    echo -e "${GREEN}${T_DDNS_RUNNING_UNINSTALL}${RESET}"
                 else
                     if [ -f "$SERVICE_FILE" ]; then
                         MODE="uninstall"
-                        echo -e "${GREEN}检测到 ddns-go 已安装但未运行，将执行卸载操作...${RESET}"
+                        echo -e "${GREEN}${T_DDNS_INSTALLED_UNINSTALL}${RESET}"
                     else
-                        echo -e "${GREEN}ddns-go 未安装，无需卸载${RESET}"
+                        echo -e "${GREEN}${T_DDNS_NOT_INSTALLED}${RESET}"
                         exit 1
                     fi
                 fi
-                # 停止服务
-                echo -e "${GREEN}停止 ddns-go.service ...${RESET}"
+                echo -e "${GREEN}${T_DDNS_STOPPING}${RESET}"
                 systemctl stop ddns-go.service || true
-                echo -e "${GREEN}卸载 ddns-go systemd 服务...${RESET}"
+                echo -e "${GREEN}${T_DDNS_UNINSTALL_SVC}${RESET}"
                 "${INSTALL_DIR}/ddns-go" -s uninstall || true
-                echo -e "${GREEN}服务卸载完成。${RESET}"
-                echo -e "${GREEN}删除安装目录...${RESET}"
+                echo -e "${GREEN}${T_DDNS_UNINSTALL_DONE}${RESET}"
+                echo -e "${GREEN}${T_REMOVING_DIR}${RESET}"
                 rm -rf "$INSTALL_DIR"
-                echo -e "${GREEN}ddns-go 卸载完成！${RESET}"
-                read -p "按回车返回..."
+                echo -e "${GREEN}${T_DDNS_UNINSTALL_COMPLETE}${RESET}"
+                read -p "${T_PRESS_ENTER}"
                 ;;
             4)
-                echo -e "${GREEN}开始安装 OpenClaw...${RESET}"
+                echo -e "${GREEN}${T_OPENCLAW_START}${RESET}"
                 require_command curl
                 curl -fsSL https://openclaw.ai/install.sh | bash
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             5)
                 if command -v openclaw >/dev/null 2>&1; then
@@ -358,25 +689,22 @@ system_menu() {
                 fi
                 ;;
             6)
-                echo -e "${GREEN}限制日志文件大小到300M ...${RESET}"
-                echo -e "${GREEN}此功能会修改日志设置文件以保证日志文件不会超过300M${RESET}"
-                # 1. 修改 journald.conf，设置 SystemMaxUse=300M
+                echo -e "${GREEN}${T_LOG_LIMIT_START}${RESET}"
+                echo -e "${GREEN}${T_LOG_LIMIT_INFO}${RESET}"
                 CONF_FILE="/etc/systemd/journald.conf"
-                # 如果已存在 SystemMaxUse 行，则替换；否则追加
                 if grep -q "^SystemMaxUse=" "$CONF_FILE"; then
                     sed -i 's/^SystemMaxUse=.*/SystemMaxUse=300M/' "$CONF_FILE"
                 else
                     echo "SystemMaxUse=300M" >> "$CONF_FILE"
                 fi
-                echo -e "${GREEN}已将 SystemMaxUse 设置为 300M，准备重启日志服务${RESET}"
-                # 2. 重启 systemd-journald 生效
+                echo -e "${GREEN}${T_LOG_LIMIT_SET}${RESET}"
                 systemctl restart systemd-journald
-                echo -e "${GREEN}systemd-journald 已重启 日志大小300M限制已生效${RESET}"
-                read -p "按回车返回..."
+                echo -e "${GREEN}${T_LOG_LIMIT_DONE}${RESET}"
+                read -p "${T_PRESS_ENTER}"
                 ;;
             7) bt_log_clean ;;
             0) break ;;
-            *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
+            *) echo -e "${RED}${T_INVALID}${RESET}"; sleep 1 ;;
         esac
     done
 }
@@ -649,14 +977,14 @@ _bt_clean_panel_logs() {
 # 主入口：供菜单 4->7 调用
 bt_log_clean() {
     if [ "$(id -u)" -ne 0 ]; then
-        echo -e "${RED}[ERROR] 请以 root 用户运行此脚本${RESET}"; sleep 2; return
+        echo -e "${RED}[ERROR] ${T_ROOT_REQUIRED}${RESET}"; sleep 2; return
     fi
     BT_FREED=0
     echo ""
     echo -e "${CYAN}============================================${RESET}"
-    echo -e "${CYAN}    宝塔面板 日志 & 垃圾 自动清理${RESET}"
+    echo -e "${CYAN}    ${T_BT_TITLE}${RESET}"
     echo -e "${CYAN}============================================${RESET}"
-    echo "开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
+    echo "${T_START_TIME}$(date '+%Y-%m-%d %H:%M:%S')"
     echo ""
     _bt_clean_system_log
     _bt_clean_panel_residue
@@ -673,10 +1001,10 @@ bt_log_clean() {
     _bt_clean_panel_logs
     echo ""
     echo -e "${CYAN}============================================${RESET}"
-    echo -e "${GREEN}  清理完成！共释放: $(_bt_to_size "$BT_FREED")${RESET}"
-    echo "完成时间: $(date '+%Y-%m-%d %H:%M:%S')"
+    echo -e "${GREEN}  ${T_BT_DONE}$(_bt_to_size "$BT_FREED")${RESET}"
+    echo "${T_END_TIME}$(date '+%Y-%m-%d %H:%M:%S')"
     echo -e "${CYAN}============================================${RESET}"
-    read -p "按回车返回..."
+    read -p "${T_PRESS_ENTER}"
 }
 
 
@@ -707,7 +1035,11 @@ error()   { echo -e "${RED}[ERROR]${RESET} $*" >&2; }
 # ─────────────────────────────────────────────
 cleanup() {
     rm -rf "${TMP_DIR}"
-    info "已清理临时目录"
+    if [ "$LANG_MODE" = "en" ]; then
+        info "Temporary directory cleaned"
+    else
+        info "已清理临时目录"
+    fi
 }
 trap cleanup EXIT
 
@@ -715,22 +1047,26 @@ trap cleanup EXIT
 # 从文件服务器下载证书文件
 # ─────────────────────────────────────────────
 download_certs() {
-    info "正在从 ${CERT_SERVER} 下载证书文件..."
+    info "${T_DOWNLOADING_CERTS} ${CERT_SERVER}..."
 
     local urls=("${CERT_URL}" "${KEY_URL}" "${PEM_URL}" "${ISSUER_URL}")
     local files=("${CERT_FILE}" "${KEY_FILE}" "${PEM_FILE}" "${ISSUER_FILE}")
 
     for i in "${!urls[@]}"; do
-        info "  下载 ${urls[$i]}"
+        if [ "$LANG_MODE" = "en" ]; then
+            info "  Downloading ${urls[$i]}"
+        else
+            info "  下载 ${urls[$i]}"
+        fi
         if ! curl -fsSL --connect-timeout 10 --max-time 30 \
                 "${urls[$i]}" -o "${files[$i]}"; then
-            error "下载失败：${urls[$i]}"
-            error "请确认 192.168.2.1:16666 服务可访问，且当前机器在局域网内"
+            error "${T_DOWNLOAD_FAIL}${urls[$i]}"
+            error "${T_CHECK_SERVER}"
             exit 1
         fi
     done
 
-    success "证书文件下载完成，存放于 ${TMP_DIR}"
+    success "${T_CERTS_DOWNLOADED} ${TMP_DIR}"
 }
 
 # ─────────────────────────────────────────────
@@ -755,54 +1091,50 @@ install_pve() {
     node="$(hostname)"
     local pve_cert_dir="/etc/pve/nodes/${node}"
 
-    info "检测到 Proxmox VE 系统，节点名：${node}"
+    info "${T_PVE_DETECTED}${node}"
 
     # 1. 备份旧证书
     local backup_dir="/root/cert-backup-$(date +%Y%m%d_%H%M%S)"
     mkdir -p "${backup_dir}"
     if ls "${pve_cert_dir}"/*.pem "${pve_cert_dir}"/*.key &>/dev/null 2>&1; then
         cp "${pve_cert_dir}"/*.pem "${pve_cert_dir}"/*.key "${backup_dir}/" 2>/dev/null || true
-        success "旧证书已备份至 ${backup_dir}"
+        success "${T_CERT_BACKUP_TO} ${backup_dir}"
     fi
 
     # 2. 强制重置 PVE 证书（清除旧自定义证书）
-    info "执行 pvecm updatecerts --force 重置证书..."
+    info "${T_PVE_FORCE_UPDATE}"
     pvecm updatecerts --force
-    success "pvecm updatecerts 完成"
+    success "${T_PVE_UPDATE_DONE}"
 
     # 3. 将新证书写入 PVE 节点证书目录
-    #    pveproxy-ssl.pem = 完整证书链（域名证书 + 中间 CA）
-    #    pveproxy-ssl.key = 私钥
-    info "安装新证书到 ${pve_cert_dir}..."
+    info "${T_INSTALLING_CERT_TO} ${pve_cert_dir}..."
 
-    # 构建完整链：域名证书 + 颁发者证书
     cat "${CERT_FILE}" "${ISSUER_FILE}" > "${pve_cert_dir}/pveproxy-ssl.pem"
     cp  "${KEY_FILE}"                    "${pve_cert_dir}/pveproxy-ssl.key"
 
-    # 设置正确权限
     chmod 640 "${pve_cert_dir}/pveproxy-ssl.pem"
     chmod 600 "${pve_cert_dir}/pveproxy-ssl.key"
     chown root:www-data "${pve_cert_dir}/pveproxy-ssl.pem" 2>/dev/null || \
         chown root:root  "${pve_cert_dir}/pveproxy-ssl.pem"
     chown root:root "${pve_cert_dir}/pveproxy-ssl.key"
 
-    success "证书文件已写入 ${pve_cert_dir}"
+    success "${T_CERT_WRITTEN} ${pve_cert_dir}"
 
     # 4. 重启 pveproxy 使证书生效
-    info "重启 pveproxy 服务..."
+    info "${T_RESTARTING_PVEPROXY}"
     systemctl restart pveproxy
     systemctl is-active --quiet pveproxy && \
-        success "pveproxy 已成功重启" || \
-        { error "pveproxy 重启失败，请检查日志：journalctl -xe -u pveproxy"; exit 1; }
+        success "${T_PVEPROXY_RESTARTED}" || \
+        { error "${T_PVEPROXY_FAIL}journalctl -xe -u pveproxy"; exit 1; }
 
     # 5. 输出验证信息
     echo ""
-    info "证书信息验证："
+    info "${T_CERT_VERIFY}"
     openssl x509 -in "${pve_cert_dir}/pveproxy-ssl.pem" \
         -noout -subject -issuer -dates 2>/dev/null \
         | sed 's/^/    /'
     echo ""
-    success "PVE 证书安装完成！访问 https://pve.yins.top:8006 验证"
+    success "${T_PVE_CERT_DONE} https://pve.yins.top:8006"
 }
 
 
@@ -810,28 +1142,26 @@ install_pve() {
 # Debian 安装逻辑
 # ─────────────────────────────────────────────
 install_debian() {
-    info "检测到 Debian 系统"
+    info "${T_DEBIAN_DETECTED}"
 
-    # 1. 安装系统级 CA 信任（将颁发者证书加入系统信任链）
-    info "将 CA 证书添加到系统信任链..."
+    # 1. 安装系统级 CA 信任
+    info "${T_CA_INSTALLING}"
     local ca_dir="/usr/local/share/ca-certificates"
     mkdir -p "${ca_dir}"
     cp "${ISSUER_FILE}" "${ca_dir}/${DOMAIN}_issuer.crt"
     update-ca-certificates
-    success "系统 CA 信任链已更新"
+    success "${T_CA_UPDATED}"
 
     # 2. 将证书和私钥部署到标准位置
     local ssl_cert_dir="/etc/ssl/certs"
     local ssl_key_dir="/etc/ssl/private"
 
-    info "部署证书文件..."
+    info "${T_DEPLOYING_CERT}"
 
-    # 完整链：域名证书 + 颁发者
     cat "${CERT_FILE}" "${ISSUER_FILE}" > "${ssl_cert_dir}/${DOMAIN}-fullchain.pem"
     cp  "${KEY_FILE}"                    "${ssl_key_dir}/${DOMAIN}.key"
     cp  "${PEM_FILE}"                    "${ssl_cert_dir}/${DOMAIN}.pem"
 
-    # 设置正确权限
     chmod 644 "${ssl_cert_dir}/${DOMAIN}-fullchain.pem"
     chmod 644 "${ssl_cert_dir}/${DOMAIN}.pem"
     chmod 600 "${ssl_key_dir}/${DOMAIN}.key"
@@ -840,32 +1170,50 @@ install_debian() {
     chown root:ssl-cert "${ssl_key_dir}/${DOMAIN}.key" 2>/dev/null || \
         chown root:root  "${ssl_key_dir}/${DOMAIN}.key"
 
-    success "证书已部署到："
-    echo "    证书链：${ssl_cert_dir}/${DOMAIN}-fullchain.pem"
-    echo "    PEM   ：${ssl_cert_dir}/${DOMAIN}.pem"
-    echo "    私钥  ：${ssl_key_dir}/${DOMAIN}.key"
+    success "${T_CERT_DEPLOYED}"
+    if [ "$LANG_MODE" = "en" ]; then
+        echo "    Certificate: ${ssl_cert_dir}/${DOMAIN}-fullchain.pem"
+        echo "    PEM       : ${ssl_cert_dir}/${DOMAIN}.pem"
+        echo "    Private key: ${ssl_key_dir}/${DOMAIN}.key"
+    else
+        echo "    证书链：${ssl_cert_dir}/${DOMAIN}-fullchain.pem"
+        echo "    PEM   ：${ssl_cert_dir}/${DOMAIN}.pem"
+        echo "    私钥  ：${ssl_key_dir}/${DOMAIN}.key"
+    fi
 
     # 3. 验证证书信息
     echo ""
-    info "证书信息验证："
+    info "${T_CERT_VERIFY}"
     openssl x509 -in "${ssl_cert_dir}/${DOMAIN}-fullchain.pem" \
         -noout -subject -issuer -dates 2>/dev/null \
         | sed 's/^/    /'
     echo ""
 
-    # 4. 提示后续操作（Nginx / Apache / 其他服务需手动配置）
-    warn "提示：如需在 Nginx/Apache 等服务中使用此证书，请手动配置后重启对应服务"
-    warn "  Nginx 示例："
-    warn "    ssl_certificate     ${ssl_cert_dir}/${DOMAIN}-fullchain.pem;"
-    warn "    ssl_certificate_key ${ssl_key_dir}/${DOMAIN}.key;"
+    # 4. 提示后续操作
+    warn "${T_CERT_HINT}"
+    warn "${T_CERT_NGINX_EXAMPLE1}"
+    if [ "$LANG_MODE" = "en" ]; then
+        warn "    ssl_certificate     ${ssl_cert_dir}/${DOMAIN}-fullchain.pem;"
+        warn "    ssl_certificate_key ${ssl_key_dir}/${DOMAIN}.key;"
+    else
+        warn "    ssl_certificate     ${ssl_cert_dir}/${DOMAIN}-fullchain.pem;"
+        warn "    ssl_certificate_key ${ssl_key_dir}/${DOMAIN}.key;"
+    fi
 
-    success "Debian 证书安装完成！"
+    success "${T_DEBIAN_CERT_DONE}"
+}
+
+check_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo -e "${RED}[ERROR] ${T_ROOT_REQUIRED}${RESET}"
+        exit 1
+    fi
 }
 
 update_ssl_certificates() {
     echo ""
     echo -e "${CYAN}============================================${RESET}"
-    echo -e "${CYAN}  SSL 证书自动安装脚本  |  *.${DOMAIN}${RESET}"
+    echo -e "${CYAN}  ${T_SSL_TITLE}  |  *.${DOMAIN}${RESET}"
     echo -e "${CYAN}============================================${RESET}"
     echo ""
 
@@ -877,43 +1225,41 @@ update_ssl_certificates() {
     elif is_debian; then
         install_debian
     else
-        error "不支持的操作系统！"
-        error "此脚本仅支持 Proxmox VE 或 Debian 系统"
+        error "${T_OS_UNSUPPORTED}"
+        error "${T_OS_SUPPORT_INFO}"
         if [[ -f /etc/os-release ]]; then
-            error "当前系统信息："
+            error "${T_OS_INFO}"
             grep -E '^(ID|NAME|VERSION)=' /etc/os-release | sed 's/^/    /' >&2
         fi
         exit 1
     fi
-    read -p "完成！按回车返回主菜单..."
+    read -p "${T_DONE}"
 }
 
 # ---------- Docker 菜单 ----------
 docker_menu() {
     while true; do
         clear
-        echo -e "${BLUE}----- Docker 管理 -----${RESET}"
-        echo -e "${YELLOW}1)${RESET} 安装 Docker"
-        echo -e "${YELLOW}2)${RESET} 更换 Docker 镜像加速源"
-        echo -e "${YELLOW}0)${RESET} 返回主菜单"
-        read -p "请输入选项: " choice
+        echo -e "${BLUE}${T_DOCKER_TITLE}${RESET}"
+        echo -e "${YELLOW}${T_DOCKER_INSTALL}${RESET}"
+        echo -e "${YELLOW}${T_DOCKER_MIRROR}${RESET}"
+        echo -e "${YELLOW}${T_RETURN_MAIN}${RESET}"
+        read -p "${T_PROMPT}" choice
         case "$choice" in
             1)
-                echo -e "${GREEN}安装 Docker ...${RESET}"
-                # 检查 curl
+                echo -e "${GREEN}${T_DOCKER_INSTALLING}${RESET}"
                 require_command curl
                 bash <(curl -sSL https://linuxmirrors.cn/docker.sh)
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             2)
-                echo -e "${GREEN}更换 Docker 镜像加速源 ...${RESET}"
-                # 检查 curl
+                echo -e "${GREEN}${T_DOCKER_MIRROR_MSG}${RESET}"
                 require_command curl
                 bash <(curl -sSL https://linuxmirrors.cn/docker.sh) --only-registry
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             0) break ;;
-            *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
+            *) echo -e "${RED}${T_INVALID}${RESET}"; sleep 1 ;;
         esac
     done
 }
@@ -922,54 +1268,58 @@ docker_menu() {
 system_check_menu() {
     while true; do
         clear
-        echo -e "${BLUE}----- 系统检查 -----${RESET}"
-        echo -e "${YELLOW}1)${RESET} 检查是否需要重启"
-        echo -e "${YELLOW}2)${RESET} 查看磁盘空间"
-        echo -e "${YELLOW}3)${RESET} 查看磁盘占用最大的目录"
-        echo -e "${YELLOW}4)${RESET} 查看最近系统日志"
-        echo -e "${YELLOW}5)${RESET} 查看 CPU 使用"
-        echo -e "${YELLOW}6)${RESET} 查看内存使用"
-        echo -e "${YELLOW}7)${RESET} 查看系统配置"
-        echo -e "${YELLOW}8)${RESET} 查看内核版本"
-        echo -e "${YELLOW}9)${RESET} 查看失败服务"
-        echo -e "${YELLOW}10)${RESET} 查看IP地址"
-        echo -e "${YELLOW}0)${RESET} 返回主菜单"
-        read -p "请输入选项: " choice
+        echo -e "${BLUE}${T_CHECK_TITLE}${RESET}"
+        echo -e "${YELLOW}${T_CHECK_REBOOT}${RESET}"
+        echo -e "${YELLOW}${T_CHECK_DISK}${RESET}"
+        echo -e "${YELLOW}${T_CHECK_DISK_TOP}${RESET}"
+        echo -e "${YELLOW}${T_CHECK_LOG}${RESET}"
+        echo -e "${YELLOW}${T_CHECK_CPU}${RESET}"
+        echo -e "${YELLOW}${T_CHECK_MEM}${RESET}"
+        echo -e "${YELLOW}${T_CHECK_SYSINFO}${RESET}"
+        echo -e "${YELLOW}${T_CHECK_KERNEL}${RESET}"
+        echo -e "${YELLOW}${T_CHECK_FAILED}${RESET}"
+        echo -e "${YELLOW}${T_CHECK_IP}${RESET}"
+        echo -e "${YELLOW}${T_RETURN_MAIN}${RESET}"
+        read -p "${T_PROMPT}" choice
         case "$choice" in
             1)
                 if [ -f /var/run/reboot-required ]; then
-                    echo -e "${RED}系统需要重启！${RESET}"
+                    echo -e "${RED}${T_REBOOT_NEEDED}${RESET}"
                     cat /var/run/reboot-required
                 else
-                    echo -e "${GREEN}不需要重启。${RESET}"
+                    echo -e "${GREEN}${T_NO_REBOOT}${RESET}"
                 fi
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             2)
-                echo -e "${CYAN}磁盘空间使用情况：${RESET}"
-			    hd_percent=$(df --output=pcent / | tail -1 | tr -dc '0-9.')
-			    hd_used=$(df --output=used / | tail -1)
-			    hd_used_gb=$(awk -v k="$hd_used" 'BEGIN {printf "%.2f", k/1024/1024}')
-			    echo "已使用 $hd_percent %，使用了 $hd_used_gb GB"
-                read -p "按回车返回..."
+                echo -e "${CYAN}${T_DISK_USAGE}${RESET}"
+                hd_percent=$(df --output=pcent / | tail -1 | tr -dc '0-9.')
+                hd_used=$(df --output=used / | tail -1)
+                hd_used_gb=$(awk -v k="$hd_used" 'BEGIN {printf "%.2f", k/1024/1024}')
+                if [ "$LANG_MODE" = "en" ]; then
+                    echo "Used ${hd_percent}% (${hd_used_gb} GB)"
+                else
+                    echo "已使用 ${hd_percent}%，使用了 ${hd_used_gb} GB"
+                fi
+                read -p "${T_PRESS_ENTER}"
                 ;;
             3)
-                echo -e "${CYAN}正在查找大尺寸目录，请稍候...${RESET}"
+                echo -e "${CYAN}${T_FINDING_DIR}${RESET}"
                 du -h /var | sort -hr | head -n 20
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             4)
-                echo -e "${CYAN}最近 50 行系统日志：${RESET}"
+                echo -e "${CYAN}${T_RECENT_LOG}${RESET}"
                 journalctl -n 50
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             5)
-                echo -e "${CYAN}CPU 使用情况：${RESET}"
+                echo -e "${CYAN}${T_CPU_USAGE}${RESET}"
                 top -b -n 1 | head -n 5
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             6)
-                echo -e "${CYAN}内存使用情况：${RESET}"
+                echo -e "${CYAN}${T_MEM_USAGE}${RESET}"
 
                 get_mem_info() {
                     awk '
@@ -982,54 +1332,70 @@ system_check_menu() {
                     ' /proc/meminfo
                 }
                 read mem_percent mem_used_gb <<< "$(get_mem_info)"
-                echo "已使用 $mem_percent %，使用了 $mem_used_gb GB"
-                read -p "按回车返回..."
+                if [ "$LANG_MODE" = "en" ]; then
+                    echo "Used ${mem_percent}% (${mem_used_gb} GB)"
+                else
+                    echo "已使用 ${mem_percent}%，使用了 ${mem_used_gb} GB"
+                fi
+                read -p "${T_PRESS_ENTER}"
                 ;;
             7)
-                echo -e "${CYAN}当前系统配置：${RESET}"
+                echo -e "${CYAN}${T_SYS_CONFIG}${RESET}"
                 hostnamectl
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             8)
-                echo -e "${CYAN}当前内核版本：${RESET}"
+                echo -e "${CYAN}${T_KERNEL_VER}${RESET}"
                 uname -r
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             9)
-                echo -e "${CYAN}查看失败服务：${RESET}"
+                echo -e "${CYAN}${T_FAILED_SVC}${RESET}"
                 failed=$(systemctl --failed --no-pager --plain --quiet | awk 'NR>1 {print $1}')
                 if [ -z "$failed" ]; then
-                    echo -e "${GREEN}当前没有失败服务${RESET}"
+                    echo -e "${GREEN}${T_NO_FAILED_SVC}${RESET}"
                 else
                     for svc in $failed; do
-                        echo -e "\n服务: $svc"
+                        if [ "$LANG_MODE" = "en" ]; then
+                            echo -e "\nService: $svc"
+                        else
+                            echo -e "\n服务: $svc"
+                        fi
                         journalctl -u "$svc" -n 20 --no-pager
                     done
                 fi
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             10)
-                echo -e "${CYAN}当前 IP 地址：${RESET}"
+                echo -e "${CYAN}${T_IP_ADDR}${RESET}"
                 echo -e "IPV4: ${GREEN}$SERVER_IP${RESET}"
                 echo -e "IPV6: ${GREEN}$SERVER_IP6${RESET}"
-                read -p "按回车返回..."
+                read -p "${T_PRESS_ENTER}"
                 ;;
             0) break ;;
-            *) echo -e "${RED}无效选项${RESET}"; sleep 1 ;;
+            *) echo -e "${RED}${T_INVALID}${RESET}"; sleep 1 ;;
         esac
     done
 }
 
 # ---------- 更新 ----------
 self_update(){
-    echo -e "${GREEN}正在更新脚本...${RESET}"
+    echo -e "${GREEN}${T_SELF_UPDATING}${RESET}"
     require_command curl
     bash <(curl -fsSL https://raw.githubusercontent.com/yduke/debian-scripts/main/install.sh)
-    echo -e "${GREEN}脚本已更新到最新版本！${RESET}"
-    echo -e "${GREEN}需要重启脚本生效。${RESET}"
-    read -p "按回车退出脚本，你需要再次执行update使用新版。"
+    echo -e "${GREEN}${T_SELF_UPDATED}${RESET}"
+    echo -e "${GREEN}${T_SELF_RESTART}${RESET}"
+    read -p "${T_SELF_EXIT}"
     exit 0
 }
+
+# ---------- 解析命令行参数 ----------
+for arg in "$@"; do
+    case "$arg" in
+        --lang=en) LANG_MODE="en"; init_lang ;;
+        --lang=zh) LANG_MODE="zh"; init_lang ;;
+    esac
+done
 
 # ---------- 启动主菜单 ----------
 main_menu
